@@ -4,7 +4,7 @@ import threading
 import select
 
 # user = pickle.load(open("user.p", "rb"))
-user = {}
+user = {'admin': ['admin', [], 1]}
 # session = pickle.load(open("session.p", "rb"))
 session = {}
 running = True
@@ -25,7 +25,6 @@ class ThreadForClient(threading.Thread):
         if data[0] == '|':
             data = data[1:].split('|')
             if data[0] == 'login' and len(data) == 3:
-                print(user[data[1]][0], data[2])
                 if data[1] in user:
                     if user[data[1]][0] == data[2]:
                         send_ = '1'
@@ -33,7 +32,7 @@ class ThreadForClient(threading.Thread):
                         print(self.user + " viens de se connecter")
             elif data[0] == 'newlogin' and len(data) == 3:
                 if not data[1] in user:
-                    user[data[1]] = [data[2], []]
+                    user[data[1]] = [data[2], [], 0]
                     send_ = '1'
                     self.user = data[1]
                     print(self.user + " viens de se connecter")
@@ -66,7 +65,7 @@ class ThreadForClient(threading.Thread):
                     send_ += "|" + chat
                 if len(send_) != 1:
                     send_ = send_[1:]
-            elif data[0] == 'shutdown':
+            elif data[0] == 'shutdown' and user[self.user][2] == 1:
                 running = False
                 send_ = 'Arret du serveur'
             self.conn.send(send_.encode("utf-8"))
