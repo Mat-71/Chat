@@ -3,7 +3,8 @@ import socket
 import threading
 import select
 
-user = pickle.load(open("user.p", "rb"))
+#user = pickle.load(open("user.p", "rb"))
+user = {}
 session = pickle.load(open("session.p", "rb"))
 running = True
 
@@ -15,50 +16,56 @@ class ThreadForClient(threading.Thread):
         self.session = None
         self.user = None
 
+    def get_user(self):
+        return self.session
+
     def run(self):
         global running
         data = self.conn.recv(1024)
         data = data.decode("utf-8")
-        send_ = 'erreur commande'
+        send_ = '0'
         if data[0] == '|':
             data = data[1:].split('|')
             if data[0] == 'login' and len(data) == 3:
+                print(user[data[1]][0], data[2])
                 if data[1] in user:
                     if user[data[1]][0] == data[2]:
-                        send_ = 'Vous etes connecté'
+                        send_ = '1'
                         self.user = data[1]
+                        print(self.user+" viens de se connecter")
                     else:
-                        send_ = 'mauvais mot de passe'
+                        send_ = '0'
                 else:
-                    send_ = 'login inexistant'
+                    send_ = '0'
             elif data[0] == 'newlogin' and len(data) == 3:
                 if data[1] in user:
-                    send_ = 'nom utilisateur déjà pris'
+                    send_ = '0'
                 else:
                     user[data[1]] = [data[2], []]
-                    send_ = 'Vous etes connecté'
+                    send_ = '1'
                     self.user = data[1]
+                    print(self.user+" viens de se connecter")
             elif data[0] == 'session' and (len(data) == 2 or len(data) == 3):
                 if data[1] in user[self.user][1]:
                     self.session = data[1]
-                    send_ = 'Vous etes connecté à la session'
+                    send_ = '1'
                 else:
-                    send_ = "Vous n'avez pas acces à la session"
+                    send_ = "0"
                 if data[1] in session and len(data) == 3:
                     if session[data[1]][0] == data[2]:
-                        send_ = 'Vous etes connecté à la session'
+                        send_ = '1'
                         self.session = data[1]
                         user[self.user][1].append(data[1])
                     else:
-                        send_ = 'mauvais mot de passe'
+                        send_ = '0'
                 elif len(data) == 3:
-                    send_ = 'session inexistante'
+                    send_ = '0'
             elif data[0] == 'newsession' and len(data) == 3:
                 if data[1] in session:
-                    send_ = 'nom de session déjà pris'
+                    send_ = '0'
                 else:
                     session[data[1]] = [data[2], []]
-                    send_ = 'Vous etes connecté à la session'
+                    send_ = '1'
                     self.session = data[1]
                     user[self.user][1].append(data[1])
             elif self.session in session and self.user in user and data[0] == "getchat":
@@ -69,18 +76,18 @@ class ThreadForClient(threading.Thread):
                     send_ = send_[1:]
                 else:
                     self.session = None
-                    send_ = 'chat error'
+                    send_ = '0'
             elif self.user in user and data[0] == "getsessions":
-                send_ = ""
+                send_ = "|"
                 for chat in user[self.user][1]:
-                    send_ += "|" + i
-                send_ = send_[1:]
+                    send_ += "|" + chat
+                if len(send_) != 1:
+                    send_ = send_[1:]
             elif data[0] == 'shutdown':
                 running = False
                 send_ = 'Arret du serveur'
-            self.conn.sendall(send_.encode("utf-8"))
+            self.conn.send(send_.encode("utf-8"))
         elif not (self.user is None or self.session is None):
-            print(self.user, self.session)
             session[self.session][1].append([self.user, data])
             print(self.session + ':' + self.user + '>' + data)
             message = self.user + '>' + data
@@ -91,7 +98,6 @@ class ThreadForClient(threading.Thread):
 
 hote = ''
 port = 12800
-
 clients_connectes = []
 socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket.bind((hote, port))
@@ -110,7 +116,6 @@ while running:
             clients_connectes.append(connexion_avec_client)
         except ConnectionResetError:
             pass
-        print(infos_connexion[0] + " vient de se connecter")
     clients_a_lire = []
     try:
         clients_a_lire, wlist, xlist = select.select(clients_connectes,
@@ -122,7 +127,7 @@ while running:
             my_thread = connection[clients_connectes.index(i)]
             try:
                 my_thread.run()
-            except ConnectionResetError:
+            except:
                 pass
     pickle.dump(user, open("user.p", "wb"))
     pickle.dump(session, open("session.p", "wb"))
