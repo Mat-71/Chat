@@ -165,12 +165,11 @@ try:
                     input_ = None
                     password_input = input_value
                 if button_submit.button_clicked(pos) and user_input != '' and password_input != '':
-                    mdp = hashlib.md5(password_input.encode('utf-8'))
-                    print(password_input, mdp)
+                    mdp = hashlib.md5(password_input.encode('utf-8')).hexdigest()
                     if menu == 'connexion':
-                        message = "|login|" + user_input + "|" + str(mdp)
+                        message = "|login|" + user_input + "|" + mdp
                     elif menu == 'new client':
-                        message = "|newlogin|" + user_input + "|" + str(mdp)
+                        message = "|newlogin|" + user_input + "|" + mdp
                     client.send(message.encode("utf-8"))
                     reponse = client.recv(1023).decode('utf-8')
                     if reponse == '1':
