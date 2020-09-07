@@ -3,9 +3,10 @@ import socket
 import threading
 import select
 
-#user = pickle.load(open("user.p", "rb"))
+# user = pickle.load(open("user.p", "rb"))
 user = {}
-session = pickle.load(open("session.p", "rb"))
+# session = pickle.load(open("session.p", "rb"))
+session = {}
 running = True
 
 
@@ -15,9 +16,6 @@ class ThreadForClient(threading.Thread):
         self.conn = conn
         self.session = None
         self.user = None
-
-    def get_user(self):
-        return self.session
 
     def run(self):
         global running
@@ -32,38 +30,24 @@ class ThreadForClient(threading.Thread):
                     if user[data[1]][0] == data[2]:
                         send_ = '1'
                         self.user = data[1]
-                        print(self.user+" viens de se connecter")
-                    else:
-                        send_ = '0'
-                else:
-                    send_ = '0'
+                        print(self.user + " viens de se connecter")
             elif data[0] == 'newlogin' and len(data) == 3:
-                if data[1] in user:
-                    send_ = '0'
-                else:
+                if not data[1] in user:
                     user[data[1]] = [data[2], []]
                     send_ = '1'
                     self.user = data[1]
-                    print(self.user+" viens de se connecter")
+                    print(self.user + " viens de se connecter")
             elif data[0] == 'session' and (len(data) == 2 or len(data) == 3):
                 if data[1] in user[self.user][1]:
                     self.session = data[1]
                     send_ = '1'
-                else:
-                    send_ = "0"
                 if data[1] in session and len(data) == 3:
                     if session[data[1]][0] == data[2]:
                         send_ = '1'
                         self.session = data[1]
                         user[self.user][1].append(data[1])
-                    else:
-                        send_ = '0'
-                elif len(data) == 3:
-                    send_ = '0'
             elif data[0] == 'newsession' and len(data) == 3:
-                if data[1] in session:
-                    send_ = '0'
-                else:
+                if not data[1] in session:
                     session[data[1]] = [data[2], []]
                     send_ = '1'
                     self.session = data[1]
@@ -76,7 +60,6 @@ class ThreadForClient(threading.Thread):
                     send_ = send_[1:]
                 else:
                     self.session = None
-                    send_ = '0'
             elif self.user in user and data[0] == "getsessions":
                 send_ = "|"
                 for chat in user[self.user][1]:
@@ -90,8 +73,6 @@ class ThreadForClient(threading.Thread):
         elif not (self.user is None or self.session is None):
             session[self.session][1].append([self.user, data])
             print(self.session + ':' + self.user + '>' + data)
-            message = self.user + '>' + data
-            self.conn.sendall(message.encode("utf-8"))
         else:
             self.conn.sendall("tu n'es pas connecté".encode("utf-8"))
 
