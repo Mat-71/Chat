@@ -76,6 +76,8 @@ button_password = Button((255, 255, 255), (0, 0, 0), [width // 2, height // 2], 
 button_quit = Button((0, 0, 0), None, [0, 0, height // 20, height // 20])
 button_submit = Button((127, 127, 127), (255, 255, 255), [width // 2, height * 2 // 3], 'Valider', 50)
 button_new_session = Button((127, 127, 127), (255, 255, 255), [width * 7 // 8, height // 10], 'Nouvelle session', 40)
+
+button_session = Button((127, 127, 127), (255, 255, 255), [width * 7 // 8, height // 5], 'connexion session', 40)
 pos = (0, 0)
 try:
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -128,7 +130,12 @@ try:
         if menu == 'main' or menu == 'new session':
             pygame.draw.line(Screen, (255, 255, 255), (width * 3 // 4, 0), (width * 3 // 4, height * 94 // 100), 1)
             button_new_session.display_button()
-        if menu == 'connexion' or menu == 'new client':
+            button_session.display_button()
+            if button_new_session.button_clicked(pos):
+                menu = 'new session'
+            elif button_session.button_clicked(pos):
+                menu = 'session'
+        if menu == 'connexion' or menu == 'new client' or menu == 'new session' or menu == 'session':
             pygame.draw.rect(Screen, (255, 255, 255), [width // 4, height // 4, width // 2, height // 2], 5)
             button_submit.display_button()
             if input_ == "user":
@@ -170,6 +177,11 @@ try:
                         message = "|login|" + user_input + "|" + mdp
                     elif menu == 'new client':
                         message = "|newlogin|" + user_input + "|" + mdp
+                    elif menu == "new session":
+                        message = "|newsession|" + user_input + "|" + mdp
+                    elif menu == "session":
+                        message = "|session|" + user_input + "|" + mdp
+                    user_input, password_input = "", ""
                     client.send(message.encode("utf-8"))
                     reponse = client.recv(1023).decode('utf-8')
                     if reponse == '1':
