@@ -8,7 +8,7 @@ message = ""
 try:
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((adresseIP, port))
-    client.send(b'|login|admin|admin')
+    client.send(b'|login|admin|f14da2c83f8f51380bfcc7c198e943ad')
     time.sleep(0.1)
     client.send(b'|shutdown')
     time.sleep(0.1)

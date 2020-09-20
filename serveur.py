@@ -4,9 +4,9 @@ import threading
 import select
 
 # user = pickle.load(open("user.p", "rb"))
-user = {'admin': ['admin', [], 1]}
+user = {'admin': ['f14da2c83f8f51380bfcc7c198e943ad', [], 1]}
 # session = pickle.load(open("session.p", "rb"))
-session = {}
+session = {'a': ['f14da2c83f8f51380bfcc7c198e943ad', [['a', 'b']]]}
 running = True
 
 
@@ -14,7 +14,7 @@ class ThreadForClient(threading.Thread):
     def __init__(self, conn):
         threading.Thread.__init__(self)
         self.conn = conn
-        self.session = None
+        self.session = '|'
         self.user = None
 
     def run(self):
@@ -44,7 +44,8 @@ class ThreadForClient(threading.Thread):
                     if session[data[1]][0] == data[2]:
                         send_ = '1'
                         self.session = data[1]
-                        user[self.user][1].append(data[1])
+                        if not (data[1] in user[self.user][1]):
+                            user[self.user][1].append(data[1])
             elif data[0] == 'newsession' and len(data) == 3:
                 if not data[1] in session:
                     session[data[1]] = [data[2], []]
@@ -55,21 +56,26 @@ class ThreadForClient(threading.Thread):
                 if self.session in user[self.user][1]:
                     send_ = ""
                     for i_session in session[self.session][1]:
-                        send_ += '|' + i_session[0] + '\\' + i_session[1]
+                        send_ += '|' + i_session[0] + '|' + i_session[1]
                     send_ = send_[1:]
                 else:
-                    self.session = None
-            elif self.user in user and data[0] == "getsessions":
-                send_ = "|"
-                for chat in user[self.user][1]:
-                    send_ += "|" + chat
-                if len(send_) != 1:
-                    send_ = send_[1:]
+                    self.session = '|'
+            elif data[0] == "getsessions":
+                if self.user in user:
+                    send_ = "|"
+                    for chat in user[self.user][1]:
+                        send_ += "|" + chat
+                    if len(send_) != 1:
+                        send_ = send_[1:]
+                else:
+                    send_ = ''
             elif data[0] == 'shutdown' and user[self.user][2] == 1:
                 running = False
                 send_ = 'Arret du serveur'
+            elif data[0] == 'getsession':
+                send_  = self.session
             self.conn.send(send_.encode("utf-8"))
-        elif not (self.user is None or self.session is None):
+        elif not (self.user is None or self.session == '|'):
             session[self.session][1].append([self.user, data])
             print(self.session + ':' + self.user + '>' + data)
         else:
@@ -90,7 +96,6 @@ while running:
 
     for connexion in connexions_demandees:
         connexion_avec_client, infos_connexion = connexion.accept()
-        # On ajoute le socket connecté à la liste des clients
         try:
             connection.append(ThreadForClient(connexion_avec_client))
             clients_connectes.append(connexion_avec_client)
