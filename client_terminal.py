@@ -1,10 +1,18 @@
 import socket
 import sys
 import errno
-
+import time
+from key_generator import get_key_from_password
 HEADER_LENGTH = 10
 IP = "localhost"
 PORT = 42690
+
+b = time.time()
+a = get_key_from_password('Dariya')
+print(a)
+b = time.time() - b
+print(b)
+
 my_username = input("Username: ")
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((IP, PORT))
@@ -12,6 +20,7 @@ client_socket.setblocking(False)
 username = my_username.encode('utf-8')
 username_header = f"{len(username):<{HEADER_LENGTH}}".encode('utf-8')
 client_socket.send(username_header + username)
+
 
 while True:
     message = input(f'{my_username} > ')
