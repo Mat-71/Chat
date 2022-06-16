@@ -49,3 +49,13 @@ def rsa_key_gen(p: int, q: int) -> ((int, int), (int, int)):
 def get_key_from_password(password: str, keysize: int = 2048) -> ((int, int), (int, int)):
     p, q = generate_large_primes_with_password(password, keysize)
     return rsa_key_gen(p, q)
+
+
+if __name__ == "__main__":
+    import time
+    start = time.time()
+    print(get_key_from_password("azerty"))
+    print(time.time() - start)
+    start = time.time()
+    print(get_key_from_password("azerty"))
+    print(time.time() - start)
