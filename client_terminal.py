@@ -4,7 +4,7 @@ import errno
 
 HEADER_LENGTH = 10
 IP = "localhost"
-PORT = 5555
+PORT = 42690
 my_username = input("Username: ")
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((IP, PORT))

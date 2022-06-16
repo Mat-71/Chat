@@ -3,8 +3,8 @@ import select
 
 HEADER_LENGTH = 10
 
-IP = ""
-PORT = 5555
+IP = ''
+PORT = 42690
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server_socket.bind((IP, PORT))
@@ -12,7 +12,7 @@ server_socket.listen()
 sockets_list = [server_socket]
 clients = {}
 
-print(f'Listening for connections on {IP}:{PORT}...')
+print(f'Listening for connections on {IP}: {PORT}...')
 
 
 def receive_message(client_socket):
