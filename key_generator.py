@@ -7,20 +7,20 @@ def random_number(size: int) -> int:
     return random.randrange(2 ** (size - 1), 2 ** size - 1)
 
 
-def generate_large_primes_with_password(password: str, keysize: int) -> (int, int):
-    random.seed(password, 2)
+def generate_large_primes_with_password(seed: str, keysize: int) -> (int, int):
+    random.seed(seed, 2)
 
     p = random_number(keysize)
+    if p % 2 == 0:
+        p += 1
     while not is_prime(p):
-        p = random_number(keysize)
-        if p % 2 == 0:
-            p += 1
+        p += 2
 
     q = random_number(keysize)
+    if q % 2 == 0:
+        q += 1
     while not is_prime(q) or p == q:
-        q = random_number(keysize)
-        if q % 2 == 0:
-            q += 1
+        q += 2
     return p, q
 
 
@@ -36,7 +36,8 @@ def inv_mod(e: int, phi: int) -> int:
     return u1
 
 
-def rsa_key_gen(p: int, q: int) -> ((int, int), (int, int)):
+def rsa_key_gen(primes) -> ((int, int), (int, int)):
+    p, q = primes
     n = p * q
     phi_n = (p - 1) * (q - 1)
     e = 65537
@@ -47,16 +48,14 @@ def rsa_key_gen(p: int, q: int) -> ((int, int), (int, int)):
 
 
 def get_key_from_password(password: str, keysize: int = 2048) -> ((int, int), (int, int)):
-    p, q = generate_large_primes_with_password(password, keysize)
-    return rsa_key_gen(p, q)
+    if not isinstance(password, str):
+        raise TypeError(f"get_key_from_password | got {password} (type: {type(password).__name__} instead of str)")
+    return rsa_key_gen(generate_large_primes_with_password(password, keysize))
 
 
 if __name__ == "__main__":
     import time
-    password = ""
+
     start = time.time()
-    print(get_key_from_password(password))
-    print(time.time() - start)
-    start = time.time()
-    print(get_key_from_password(password))
+    print(get_key_from_password("azerty"))
     print(time.time() - start)
