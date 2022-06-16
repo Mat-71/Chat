@@ -53,9 +53,10 @@ def get_key_from_password(password: str, keysize: int = 2048) -> ((int, int), (i
 
 if __name__ == "__main__":
     import time
+    password = ""
     start = time.time()
-    print(get_key_from_password("azerty"))
+    print(get_key_from_password(password))
     print(time.time() - start)
     start = time.time()
-    print(get_key_from_password("azerty"))
+    print(get_key_from_password(password))
     print(time.time() - start)
