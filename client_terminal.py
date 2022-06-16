@@ -1,30 +1,42 @@
 import socket
-import time
+import sys
+import errno
 
-adresseIP = "172.16.1.69"  # Ici, le poste local
-port = 12800  # Se connecter sur le port 50000
+HEADER_LENGTH = 10
+IP = "localhost"
+PORT = 5555
+my_username = input("Username: ")
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect((IP, PORT))
+client_socket.setblocking(False)
+username = my_username.encode('utf-8')
+username_header = f"{len(username):<{HEADER_LENGTH}}".encode('utf-8')
+client_socket.send(username_header + username)
 
-message = ""
-try:
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect((adresseIP, port))
-    print("Connecté au serveur")
-    print("Tapez FIN pour terminer la conversation. ")
-    running = True
-    while running:
-        message = input("> ")
-        if message.lower() == "fin":
-            running = False
-        client.send(message.encode("utf-8"))
-        time.sleep(0.1)
-        client.send(b'|getchat')
-        reponse = client.recv(8191).decode("utf-8")
-        reponse = reponse.split('|')
-        for i in reponse:
-            for j in i.split('\\'):
-                print(j, end='"')
-            print("")
-    print("Connexion fermée")
-    client.close()
-except ConnectionRefusedError:
-    print("erreur de connexion")
+while True:
+    message = input(f'{my_username} > ')
+    if message:
+        message = message.encode('utf-8')
+        message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
+        client_socket.send(message_header + message)
+
+    try:
+        while True:
+            username_header = client_socket.recv(HEADER_LENGTH)
+            if not len(username_header):
+                print('Connection closed by the server')
+                sys.exit()
+            username_length = int(username_header.decode('utf-8').strip())
+            username = client_socket.recv(username_length).decode('utf-8')
+            message_header = client_socket.recv(HEADER_LENGTH)
+            message_length = int(message_header.decode('utf-8').strip())
+            message = client_socket.recv(message_length).decode('utf-8')
+            print(f'{username} > {message}')
+    except IOError as e:
+        if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+            print('Reading error: {}'.format(str(e)))
+            sys.exit()
+        continue
+    except Exception as e:
+        print('Reading error: '.format(str(e)))
+        sys.exit()
