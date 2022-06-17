@@ -30,3 +30,10 @@ def code(m, k: (int, int), mode):
         return binascii.unhexlify(hex(a)[2:]).decode()
     a = str(encrypt(m, k))
     return a.replace("[", "").replace("]", "").replace(" ", "")
+
+
+if __name__ == "__main__":
+    print(bin(int(binascii.hexlify("hello world".encode()), 16)))
+    # 0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100
+
+    # 0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100
