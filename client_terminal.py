@@ -62,14 +62,20 @@ def new_login(user: str):
     send(encrypt("check2|-1", s_key))
     return -1
 
-
-username = input()
-password = input()
-key = get_key_from_password(username + password)
 send("key")
 s_key = receive()
 s_key = s_key.split(",")
 s_key = (int(s_key[0]), int(s_key[1]))
-print(new_login(username))
-print(login(username))
+
+
+username = input()
+password = input()
+key = get_key_from_password(username + password)
+
+# new_login(username) -> 1:username pris , 0:compte correctement créé, -1: erreur envoie serveur
+# login(username) -> 1:mauvais mdp pour ce compte, 0:compte correctement connecté, -1: identifiant inconnu
+
+if __name__ == "__main__":
+    print(new_login(username))
+    print(login(username))
 
