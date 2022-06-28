@@ -2,7 +2,7 @@ import random
 import socket
 import select
 from key_generator import get_key_from_password
-from rsa import *
+from encryption import *
 
 HEADER_LENGTH = 10
 
@@ -15,7 +15,8 @@ server_socket.listen()
 sockets_list = [server_socket]
 _user = {}
 client = {}
-key = get_key_from_password('2')
+client2 = {}
+key = get_key_from_password('5', 8)
 print(f'Listening for connections on {IP}: {PORT}...')
 
 
@@ -30,10 +31,10 @@ def receive_message(client_socket):
         return False
 
 
-def send(message):
+def send(message, a):
+    message = message.encode('utf-8')
     header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
-    print(message)
-    client_socket.send(header + message.encode('utf-8'))
+    a.send(header + message)
 
 
 while True:
@@ -47,36 +48,47 @@ while True:
             if m is False:
                 sockets_list.remove(notified_socket)
                 continue
+
             if m == 'key':
                 private = (str(key[0][0]) + "," + str(key[0][1]))
-                send(private)
+                send(private, notified_socket)
                 continue
-            m = code(m, key[0], 1).split("|")
+            m = decrypt(m, key[1]).split("|")
+            print(m)
             if m[0] == 'login':
                 user = m[1]
+                print(m[1])
                 if user not in _user:
-                    notified_socket.send(f"-1")
+                    send("-1", notified_socket)
                     break
-                _check = str(random.Random().random())
+                _check = str(random.Random().randint(0, 100000))
                 client[notified_socket] = [_check, user]
-                check = code(_check, _user[user][0], 0)
-                send(check)
+                check = encrypt(_check, _user[user][0])
+                send(check, notified_socket)
             elif m[0] == 'newlogin':
+                print(m[1])
                 user_key = m[1].split(',')
                 user_key = (int(user_key[0]), int(user_key[1]))
-                user = code(m[2], user_key, 1)
+                while len(m) > 3:
+                    m[2] = m[2] + "|" + m[3]
+                    del m[3]
+                user = decrypt(m[2], user_key)
                 if user not in _user:
-                    if receive_message(notified_socket) == "0":
-                        notified_socket.send(code(user, user_key, 0))
-                        _user[user] = [user_key]
+                    client2[notified_socket] = [user, user_key]
+                    send(encrypt(user, key[1]), notified_socket)
+
                 else:
-                    notified_socket.send(f"-1")
+                    send("-1", notified_socket)
             elif m[0] == "check":
-                user_key = _user[client[notified_socket][1]]
-                if client[notified_socket][0] == code(m[1], user_key, 1):
-                    send('0')
+                user_key = _user[client[notified_socket][1]][0]
+                if client[notified_socket][0] == decrypt(m[1], user_key):
+                    send('0', notified_socket)
                 else:
-                    send('1')
+                    send('1', notified_socket)
                     print('Accepted new connection from {}'.format(client[notified_socket][1]))
+            elif m[0] == "check2":
+                if m[1] == "0":
+                    _user[client2[notified_socket][0]] = [client2[notified_socket][1]]
+                    print('Accepted new connection from {}'.format(client2[notified_socket][0]))
     for notified_socket in exception_sockets:
         sockets_list.remove(notified_socket)

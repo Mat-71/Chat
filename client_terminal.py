@@ -1,8 +1,9 @@
-from rsa import *
+from encryption import *
 import socket
 import sys
 import errno
 from key_generator import get_key_from_password
+
 sys.setrecursionlimit(15000)
 HEADER_LENGTH = 10
 IP = "localhost"
@@ -13,92 +14,62 @@ client_socket.setblocking(False)
 
 
 def receive():
-    try:
-        header = client_socket.recv(HEADER_LENGTH)
-        if not len(header):
-            print('Connection closed by the server')
+    while True:
+        try:
+            header = client_socket.recv(HEADER_LENGTH)
+            if not len(header):
+                print('Connection closed by the server')
+                sys.exit()
+            header = int(header.decode('utf-8').strip())
+            m = client_socket.recv(header).decode('utf-8')
+            return m
+        except IOError as e:
+            if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+                print('Reading error: {}'.format(str(e)))
+                sys.exit()
+        except Exception as e:
+            print('Reading error: '.format(str(e)))
             sys.exit()
-        header = int(header.decode('utf-8').strip())
-        m = client_socket.recv(header).decode('utf-8')
-        return m
-    except IOError as e:
-        if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
-            print('Reading error: {}'.format(str(e)))
-            sys.exit()
-    except Exception as e:
-        print('Reading error: '.format(str(e)))
-        sys.exit()
-    return False
 
 
 def send(message):
-    header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
+    header = f"{len(message.encode('utf-8')):<{HEADER_LENGTH}}".encode('utf-8')
     client_socket.send(header + message.encode('utf-8'))
 
 
 def login(user: str):
-    user = code('login|' + user, s_key, 0).encode('utf-8')
+    user = encrypt('login|' + user, s_key)
     send(user)
     check = receive()
     if check == "-1":
-        return 1
-    check = code('check|' + code(check, key[1], 1), s_key, 0)
+        return -1
+    check = encrypt('check|' + decrypt(check, key[1]), s_key)
     send(check)
-    return receive()
+    if receive() == "0":
+        return 0
+    return 1
 
 
 def new_login(user: str):
-    send(code('newlogin|' + str(key[0][0]) + "," + str(key[0][1]) + "|" + user, s_key, 0))
+    send(encrypt('newlogin|' + str(key[0][0]) + "," + str(key[0][1]) + "|" + encrypt(user, key[1]), s_key))
     a = receive()
     if a == '-1':
         return 1
-    a = code(a, key[1], 1)
+    a = decrypt(a, s_key)
     if a == user:
-        send("0")
-    else:
-        send("-1")
+        send(encrypt("check2|0", s_key))
+        return 0
+    send(encrypt("check2|-1", s_key))
+    return -1
 
 
 username = input()
 password = input()
-key = get_key_from_password(username+password)
+key = get_key_from_password(username + password)
 send("key")
-while True:
-    s_key = receive()
-    if s_key is not False:
-        break
+s_key = receive()
+s_key = s_key.split(",")
 s_key = (int(s_key[0]), int(s_key[1]))
-new_login(username)
+print(new_login(username))
+print(login(username))
 
-"""
-a = code(username, key[0], 0)
-print(a)
-print(code(a, key[1], 1))
-while True:
-    message = input(f'{my_username} > ')
-    if message:
-        message = message.encode('utf-8')
-        message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
-        client_socket.send(message_header + message)
-
-    try:
-        while True:
-            username_header = client_socket.recv(HEADER_LENGTH)
-            if not len(username_header):
-                print('Connection closed by the server')
-                sys.exit()
-            username_length = int(username_header.decode('utf-8').strip())
-            username = client_socket.recv(username_length).decode('utf-8')
-            message_header = client_socket.recv(HEADER_LENGTH)
-            message_length = int(message_header.decode('utf-8').strip())
-            message = client_socket.recv(message_length).decode('utf-8')
-            print(f'{username} > {message}')
-    except IOError as e:
-        if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
-            print('Reading error: {}'.format(str(e)))
-            sys.exit()
-        continue
-    except Exception as e:
-        print('Reading error: '.format(str(e)))
-        sys.exit()
-"""
