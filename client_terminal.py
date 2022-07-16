@@ -62,11 +62,11 @@ def new_login(user: str):
     send(encrypt("check2|-1", s_key))
     return -1
 
+
 send("key")
 s_key = receive()
 s_key = s_key.split(",")
 s_key = (int(s_key[0]), int(s_key[1]))
-
 
 username = input()
 password = input()
@@ -78,4 +78,3 @@ key = get_key_from_password(username + password)
 if __name__ == "__main__":
     print(new_login(username))
     print(login(username))
-
