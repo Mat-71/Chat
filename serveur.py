@@ -1,6 +1,7 @@
 import datetime
 import socket
-
+import json
+import time
 import select
 from key_generator import get_key_from_password
 from encryption import *
@@ -18,6 +19,9 @@ _user = {}
 client = {}
 client2 = {}
 client3 = {}
+time_delay = 5
+f = 0
+_time = time.time()
 key = get_key_from_password('5', 8)
 print(f'Listening for connections on {IP}: {PORT}...')
 
@@ -75,6 +79,17 @@ class User:
     def get_message(self):
         return self.message
 
+    def __dict__(self):
+        return {
+            "username": self.username,
+            "key": self.key,
+            "friend": self.friend,
+            "request": self.request,
+            "pending": self.pending,
+            "id": self.id,
+            "message": [m.__dict__() for m in self.message]
+        }
+
 
 class Message:
     def __init__(self, _id, _username: str, _message: str, date=datetime.datetime.now().replace(microsecond=0)):
@@ -88,6 +103,14 @@ class Message:
 
     def __repr__(self):
         return f'{len(self.message)}|{self.id}|{self.date}|{self.username}|{self.message}'
+
+    def __dict__(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "message": self.message,
+            "date": str(self.date)
+        }
 
     def get_date(self):
         return self.date
@@ -109,9 +132,59 @@ def send(_message, a):
     header = f"{len(_message):<{HEADER_LENGTH}}".encode('utf-8')
     a.send(header + _message)
 
-_user['admin'] = User('admin', get_key_from_password('admin')[0], friend=['a'])
-_user['a'] = User('a', get_key_from_password('a')[0], friend=['admin'])
+
+try:
+    with open("user0.json") as jsonFile:
+        user0 = json.load(jsonFile)
+        jsonFile.close()
+        f = 1
+except IOError:
+    user0 = None
+try:
+    with open("user1.json") as jsonFile:
+        user1 = json.load(jsonFile)
+        jsonFile.close()
+        if user0 is None:
+            user0 = user1
+        else:
+            if user0[0] < user1[0]:
+                user0 = user1
+                f = 2
+except IOError:
+    pass
+try:
+    with open("user2.json") as jsonFile:
+        user1 = json.load(jsonFile)
+        jsonFile.close()
+        if user0 is None:
+            user0 = user1
+        else:
+            if user0[0] < user1[0]:
+                user0 = user1
+                f = 0
+except IOError:
+    pass
+del user1
+if user0 is None:
+    _user = {}
+else:
+    user0 = user0[1]
+    for i in user0:
+        m = []
+        for j in i['message']:
+            m.append(Message(j['id'], j['username'], j['message'],
+                             datetime.datetime.strptime(j['date'], '%Y-%m-%d %H:%M:%S')))
+        _user[i['username']] = User(i['username'], i['key'], i['id'], m, i['friend'], i['request'], i['pending'])
+del user0
 while True:
+    _time = time.time() + time_delay
+    file_name = 'user' + str(f) + '.json'
+    f += 1
+    f %= 3
+    print(file_name)
+    with open(file_name, 'w') as outfile:
+        outfile.write(json.dumps([time.time(), [u.__dict__() for u in _user.values()]], indent=4))
+        outfile.close()
     read_sockets, _, exception_sockets = select.select(sockets_list, [], sockets_list)
     for notified_socket in read_sockets:
         if notified_socket == server_socket:
@@ -196,7 +269,7 @@ while True:
                         send("-1", notified_socket)
                 case 'friendaccept':
                     if user:
-                        if m[1] in user.get_request()and m[1] != user.get_username():
+                        if m[1] in user.get_request() and m[1] != user.get_username():
                             user.add_friend(m[1])
                             _user[m[1]].add_friend(user.get_username())
                             send("0", notified_socket)
