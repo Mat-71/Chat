@@ -38,7 +38,7 @@ def decrypt(encrypted: bytes, password: bytes) -> str:
     # decrypt the cipher text
     decrypted = cipher.decrypt_and_verify(cipher_text, tag)
 
-    return decrypted
+    return bytes.decode(decrypted)
 
 
 if __name__ == "__main__":
@@ -50,4 +50,4 @@ if __name__ == "__main__":
 
     # Let us decrypt using our original password
     _decrypted = decrypt(_encrypted, _password)
-    print(bytes.decode(_decrypted))
+    print(_decrypted)
