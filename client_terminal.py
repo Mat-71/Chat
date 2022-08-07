@@ -4,7 +4,8 @@ from encryption import *
 import socket
 import sys
 import errno
-from key_generator import get_key_from_password
+from key_generator import get_key_from_password, random_number
+from conversion import to_bytes, from_bytes
 
 sys.setrecursionlimit(15000)
 
@@ -128,6 +129,8 @@ client = Client(username, key, new=False)
 # login() -> 1:mauvais mdp pour ce compte, 0:compte correctement connecté, -1: identifiant inconnu
 
 if __name__ == "__main__":
+    password = to_bytes(random_number(80))
+    print(password, len(password))
     print(client.get_state())
     print(client.get_friend())
     print(client.get_pending())

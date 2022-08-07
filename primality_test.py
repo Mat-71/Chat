@@ -1,4 +1,4 @@
-# code taken from https://python.algorithms-library.com/ciphers/rabin_miller
+# credits to https://python.algorithms-library.com/ciphers/rabin_miller
 # Primality Testing with the Rabin-Miller Algorithm
 
 import random
@@ -22,7 +22,7 @@ def miller_rabin(num: int) -> bool:
             if i == t - 1:
                 return False
             i += 1
-            v = (v ** 2) % num
+            v = pow(v, 2, num)
     return True
 
 

@@ -1,14 +1,9 @@
-from conversion import to_bytes, from_bytes
-
-
-def encrypt(m: int, key: (int, int)) -> bytes:
+def encrypt(m: int, key: (int, int)) -> int:
     n, e = key
-    c = pow(m, e, n)
-    return to_bytes(c)
+    return pow(m, e, n)
 
 
-def decrypt(c: bytes, key: (int, int)) -> bytes:
-    c = from_bytes(c, int)
+def decrypt(c: int, key: (int, int)) -> bytes:
     n, e = key
     m = pow(c, e, n)
     return m

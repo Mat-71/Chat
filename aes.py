@@ -1,3 +1,4 @@
+# Credits to https://hackernoon.com/how-to-use-aes-256-cipher-python-cryptography-examples-6tbh37cr
 # AES 256 encryption/decryption using pycryptodome library
 
 import hashlib
@@ -16,13 +17,14 @@ def encrypt(plain_text: str, password: bytes) -> bytes:
     # create cipher config
     cipher_config = AES.new(private_key, AES.MODE_GCM)
 
-    # return a dictionary with the encrypted text
+    # return bytes of cipher text + salt + nonce + tag
     cipher_text, tag = cipher_config.encrypt_and_digest(bytes(plain_text, 'utf-8'))
     encrypted = cipher_text + salt + cipher_config.nonce + tag
     return encrypted
 
 
 def decrypt(encrypted: bytes, password: bytes) -> str:
+    # get info from encrypted bytes
     cipher_text = encrypted[:-48]
     salt = encrypted[-48:-32]
     nonce = encrypted[-32:-16]

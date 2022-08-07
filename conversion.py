@@ -13,7 +13,7 @@ def float_to_bytes(data: float) -> bytes:
     return str_to_bytes(str(data))
 
 
-def to_bytes(data) -> bytes:
+def to_bytes(data: bytes | str | int | float) -> bytes:
     match data:
         case bytes():
             return data
@@ -39,7 +39,7 @@ def bytes_to_float(data: bytes) -> float:
     return float(bytes_to_str(data))
 
 
-def from_bytes(data: bytes, target_type: type) -> any:
+def from_bytes(data: bytes, target_type: type) -> bytes | str | int | float:
     match target_type.__name__:
         case "bytes":
             return data
@@ -50,7 +50,7 @@ def from_bytes(data: bytes, target_type: type) -> any:
         case "float":
             return bytes_to_float(data)
         case _:
-            raise Exception(f"Unable to convert '{type(data).__name__}' to 'bytes'")
+            raise Exception(f"Unable to convert 'bytes' to '{target_type.__name__}'")
 
 
 if __name__ == "__main__":

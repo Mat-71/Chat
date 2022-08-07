@@ -36,7 +36,7 @@ def inv_mod(e: int, phi: int) -> int:
     return u1
 
 
-def rsa_key_gen(primes) -> ((int, int), (int, int)):
+def rsa_key_gen(primes: (int, int)) -> ((int, int), (int, int)):
     p, q = primes
     n = p * q
     phi_n = (p - 1) * (q - 1)
