@@ -50,8 +50,10 @@ class Client:
                 sys.exit()
 
     def _send(self, _message):
-        header = f"{len(_message.encode('utf-8')):<{self.HEADER_LENGTH}}".encode('utf-8')
-        self.client_socket.send(header + _message.encode('utf-8'))
+        if type(_message) != bytes:
+            _message = bytes(_message, 'utf-8')
+        header = f"{len(_message):<{self.HEADER_LENGTH}}".encode('utf-8')
+        self.client_socket.send(header + _message)
 
     def login(self):
         user = encrypt('login|' + self.username, self.s_key)
