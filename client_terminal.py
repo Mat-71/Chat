@@ -88,7 +88,7 @@ class Client:
 
     def get_friend(self):
         self._send(encrypt("getfriend|", self.s_key))
-        a = decrypt(self.receive(), self.key[1])
+        a = decrypt(self.receive(), self.priv_key)
         return a.split("|") if a != "" else []
 
     def get_pending(self):
@@ -98,7 +98,7 @@ class Client:
 
     def get_request(self):
         self._send(encrypt("getrequest|", self.s_key))
-        a = decrypt(self.receive(), self.key[1])
+        a = decrypt(self.receive(), self.priv_key)
         return a.split("|") if a != "" else []
 
     def friend_request(self, _friend):
@@ -120,7 +120,7 @@ class Client:
 
     def get_friend_key(self, _friend):
         self._send(encrypt("getfriendkey|" + _friend, self.s_key))
-        a = decrypt(self.receive(), self.key[1]).split("|")
+        a = decrypt(self.receive(), self.priv_key).split("|")
         return int(a[0]), int(a[1])
 
 

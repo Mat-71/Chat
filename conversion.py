@@ -6,7 +6,10 @@ def str_to_bytes(data: str) -> bytes:
 
 
 def int_to_bytes(data: int) -> bytes:
-    return data.to_bytes(int(1 + math.log(data, 256)), 'big')
+    r = data.to_bytes(int(1 + math.log(data, 256)), 'big')
+    if r[0] == 0:
+        return r[1:]
+    return r
 
 
 def float_to_bytes(data: float) -> bytes:
