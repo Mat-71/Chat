@@ -3,10 +3,17 @@ import datetime
 
 
 class Message:
-    def __init__(self, username: str, content: str):
+    def __init__(self, _id: int, username: str, content: str):
+        self.id = _id
         self.username = username
         self.content = content
-        self.sent_time = int(time.time())
+        self.sent_time = int(time.time() * 1000)
+
+    def __repr__(self):
+        return f'{len(self.content)}|{self.id}|{self.sent_time}|{self.username}|{self.content}'
+
+    def user_print(self) -> str:
+        return f"{self.username} [{self.date_str()}]: {self.content}"
 
     def date_str(self) -> str:
         date = datetime.datetime.fromtimestamp(self.sent_time)
@@ -16,12 +23,6 @@ class Message:
         if date.month != today.month or date.day != today.day:
             return date.strftime("%a. %d %b., %H:%M")
         return date.strftime("%H:%M")
-
-    def __repr__(self) -> str:
-        return f"{self.username} [{self.date_str()}]: {self.content}"
-
-    def send_format(self) -> str:
-        return f"{len(self.username)}|{self.username}|{self.sent_time}|{self.content}"
 
 
 if __name__ == "__main__":

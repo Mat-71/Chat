@@ -5,6 +5,7 @@ import time
 import select
 from key_generator import get_key_from_password
 from encryption import *
+from Message import Message
 
 HEADER_LENGTH = 10
 
@@ -88,30 +89,6 @@ class User:
             "message": [message.__dict__() for message in self.messages]
         }
 
-
-class Message:
-    def __init__(self, _id, _username: str, _content: str, _date=datetime.datetime.now().replace(microsecond=0)):
-        self.username = _username
-        self.content = _content
-        self.date = _date
-        self.id = _id
-
-    def __str__(self):
-        return f'{len(self.content)}|{self.id}|{self.date}|{self.username}|{self.content}'
-
-    def __repr__(self):
-        return f'{len(self.content)}|{self.id}|{self.date}|{self.username}|{self.content}'
-
-    def __dict__(self):
-        return {
-            "id": self.id,
-            "username": self.username,
-            "message": self.content,
-            "date": str(self.date)
-        }
-
-    def get_date(self):
-        return self.date
 
 
 def receive_message(client_socket):
