@@ -24,9 +24,9 @@ class User:
                     self.messages.append(Message(**message))
                 case _:
                     raise TypeError("Message must be a Message or a dict")
-        self.friend = friends
-        self.request = request
-        self.pending = pending
+        self.friends = friends
+        self.requests = requests
+        self.pendings = pendings
 
     def __repr__(self):
         return str(self.__dict__())
@@ -37,8 +37,8 @@ class User:
     def get_key(self):
         return self.pub_key
 
-    def get_friend(self):
-        return "|".join(self.friend)
+    def get_friends(self):
+        return "|".join([f"{len(name)},{name}" for name in self.friends])
 
     def get_request(self):
         return "|".join(self.request)
@@ -47,11 +47,11 @@ class User:
         return "|".join(self.pending)
 
     def add_friend(self, friend):
-        self.friend.append(friend)
-        if friend in self.request:
-            self.request.remove(friend)
-        if friend in self.pending:
-            self.pending.remove(friend)
+        self.friends.append(friend)
+        if friend in self.requests:
+            self.requests.remove(friend)
+        if friend in self.pendings:
+            self.pendings.remove(friend)
 
     def add_request(self, request):
         self.request.add(request)
@@ -69,8 +69,8 @@ class User:
         return {
             "username": self.username,
             "pub_key": self.pub_key,
-            "friend": list(self.friend),
-            "request": list(self.request),
-            "pending": list(self.pending),
+            "friends": list(self.friends),
+            "requests": list(self.requests),
+            "pendings": list(self.pendings),
             "messages": [message.__dict__ for message in self.messages]
         }
