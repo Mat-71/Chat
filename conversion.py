@@ -1,15 +1,9 @@
-import math
-
-
 def str_to_bytes(data: str) -> bytes:
     return data.encode('utf-8')
 
 
 def int_to_bytes(data: int) -> bytes:
-    r = data.to_bytes(int(1 + math.log(data, 256)), 'big')
-    if r[0] == 0:
-        return r[1:]
-    return r
+    return str_to_bytes(str(data))
 
 
 def float_to_bytes(data: float) -> bytes:
@@ -35,7 +29,7 @@ def bytes_to_str(data: bytes) -> str:
 
 
 def bytes_to_int(data: bytes) -> int:
-    return int.from_bytes(data, 'big')
+    return int(bytes_to_str(data))
 
 
 def bytes_to_float(data: bytes) -> float:
