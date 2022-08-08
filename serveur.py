@@ -1,11 +1,11 @@
-import datetime
 import socket
 import json
 import time
 import select
 from key_generator import get_key_from_password
 from encryption import *
-from Message import Message
+from User import User
+from conversion import to_bytes, from_bytes
 
 HEADER_LENGTH = 10
 
@@ -25,70 +25,14 @@ key = get_key_from_password('5', 8)
 print(f'Listening for connections on {IP}: {PORT}...')
 
 
-class User:
-    def __init__(self, _username, _key, _id=0, _messages=None, friend=None, request=None, pending=None):
-        if pending is None:
-            pending = []
-        if request is None:
-            request = []
-        if friend is None:
-            friend = []
-        if _messages is None:
-            _messages = []
-        self.messages = _messages
-        self.username = _username
-        self.key = _key
-        self.friend = friend
-        self.request = request
-        self.pending = pending
-        self.id = _id
-
-    def get_username(self):
-        return self.username
-
-    def get_key(self):
-        return self.key
-
-    def get_friend(self):
-        return "|".join(self.friend)
-
-    def get_request(self):
-        return "|".join(self.request)
-
-    def get_pending(self):
-        return "|".join(self.pending)
-
-    def add_friend(self, friend):
-        self.friend.append(friend)
-        if friend in self.request:
-            self.request.remove(friend)
-        if friend in self.pending:
-            self.pending.remove(friend)
-
-    def add_request(self, request):
-        self.request.append(request)
-
-    def add_pending(self, pending):
-        self.pending.append(pending)
-
-    def new_message(self, _message, _username):
-        self.messages.append(Message(self.id, _username, _message))
-        self.id += 1
-
-    def get_message(self):
-        return self.messages
-
-    def __dict__(self):
-        return {
-            "username": self.username,
-            "key": self.key,
-            "friend": self.friend,
-            "request": self.request,
-            "pending": self.pending,
-            "id": self.id,
-            "message": [message.__dict__() for message in self.messages]
-        }
-
+def save():
+    global f
+    file_name = f"user{str(f)}.json"
+    f += 1
+    f %= 3
+    print(file_name)
+    with open(file_name, 'w') as outfile:
+        outfile.write(json.dumps([time.time(), [u.__dict__() for u in _user.values()]], indent=2))
 
 
 def receive_message(client_socket):
@@ -141,7 +85,6 @@ if __name__ == "__main__":
                     f = 0
     except IOError:
         pass
-    del user1
     if user0 is None:
         _user = {}
     else:

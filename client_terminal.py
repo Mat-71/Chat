@@ -1,5 +1,6 @@
 import datetime
 
+import rsa
 from encryption import *
 import socket
 import sys
@@ -11,7 +12,7 @@ sys.setrecursionlimit(15000)
 
 
 class Client:
-    def __init__(self, _username, _key, new=True):
+    def __init__(self, _username: str, pub_key: int, priv_key: tuple[int, int], new=True):
         self.IP = "localhost"
         self.PORT = 42690
         self.HEADER_LENGTH = 10
@@ -19,18 +20,21 @@ class Client:
         self.client_socket.connect((self.IP, self.PORT))
         self.client_socket.setblocking(False)
         self.username = _username
-        self.key = _key
+        self.pub_key = pub_key
+        self.priv_key = priv_key
+        self.s_key = 0
+        self.is_connected = -1
+
+    def start_protocol(self, new):
         self._send("key")
-        self.s_key = self.receive()
-        self.s_key = self.s_key.split(",")
-        self.s_key = (int(self.s_key[0]), int(self.s_key[1]))
+        self.s_key = int(self.receive())
         if new:
-            self.state = self.new_login()
+            self.is_connected = self.new_login()
         else:
-            self.state = self.login()
+            self.is_connected = self.login()
 
     def get_state(self):
-        return self.state
+        return self.is_connected
 
     def receive(self):
         while True:
@@ -40,7 +44,7 @@ class Client:
                     print('Connection closed by the server')
                     sys.exit()
                 header = int(header.decode('utf-8').strip())
-                m = self.client_socket.recv(header).decode('utf-8')
+                m = from_bytes(self.client_socket.recv(header), str)
                 return m
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
@@ -125,11 +129,13 @@ password = ""
 key = get_key_from_password(username + password)
 client = Client(username, key, new=False)
 
-# new_login() -> 1:username pris , 0:compte correctement créé, -1: erreur envoie serveur
-# login() -> 1:mauvais mdp pour ce compte, 0:compte correctement connecté, -1: identifiant inconnu
+# new_login() -> 1:username déjà pris , 0:compte correctement créé, -1: erreur envoi serveur
+# login() -> 1:mauvais id ou mdp pour ce compte, 0:compte correctement connecté, -1: erreur envoi serveur
 
 if __name__ == "__main__":
-    password = to_bytes(random_number(80))
+    client = Client(username, pub_key, priv_key, new=True)
+    user_randaom_number = random_number(80)
+    cypher = rsa.crypt(user_randaom_number)
     print(password, len(password))
     print(client.get_state())
     print(client.get_friend())

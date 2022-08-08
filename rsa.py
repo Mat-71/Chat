@@ -1,18 +1,18 @@
-def encrypt(m: int, key: (int, int)) -> int:
-    n, e = key
+def crypt(m: int, key: int | tuple[int, int]) -> int:
+    match key:
+        case int():
+            n, e = key, 65537
+        case (n, e):
+            pass
+        case _:
+            raise TypeError(f"crypt | got {key} (type: {type(key).__name__} instead of int or tuple[int, int])")
     return pow(m, e, n)
-
-
-def decrypt(c: int, key: (int, int)) -> bytes:
-    n, e = key
-    m = pow(c, e, n)
-    return m
 
 
 if __name__ == "__main__":
     message = 69420
     print(message)
-    result = encrypt(message, (2964324619, 65537))
+    result = crypt(message, 2964324619)
     print(result)
-    original = decrypt(result, (2964324619, 428098193))
+    original = crypt(result, (2964324619, 428098193))
     print(original)

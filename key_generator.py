@@ -36,18 +36,18 @@ def inv_mod(e: int, phi: int) -> int:
     return u1
 
 
-def rsa_key_gen(primes: (int, int)) -> ((int, int), (int, int)):
+def rsa_key_gen(primes: tuple[int, int]) -> (int, (int, int)):
     p, q = primes
     n = p * q
     phi_n = (p - 1) * (q - 1)
     e = 65537
     d = inv_mod(e, phi_n)
-    public_key = (n, e)
+    public_key = n
     private_key = (n, d)
     return public_key, private_key
 
 
-def get_key_from_password(password: str, keysize: int = 2048) -> ((int, int), (int, int)):
+def get_key_from_password(password: str, keysize: int = 2048) -> (int, (int, int)):
     if not isinstance(password, str):
         raise TypeError(f"get_key_from_password | got {password} (type: {type(password).__name__} instead of str)")
     return rsa_key_gen(generate_large_primes_with_password(password, keysize))
