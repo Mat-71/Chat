@@ -74,12 +74,12 @@ class Client:
 
     def new_login(self):
         self._send(encrypt(
-            'newlogin|' + str(self.key[0][0]) + "," + str(self.key[0][1]) + "|" + encrypt(self.username, self.key[1]),
+            'newlogin|' + str(self.pub_key) + "," + str(self.key[0][1]) + "|" + self.username,
             self.s_key))
         a = self.receive()
         if a == '-1':
             return 1
-        a = decrypt(a, self.s_key)
+        a = decrypt(a, self.key)
         if a == self.username:
             self._send(encrypt("check2|0", self.s_key))
             return 0
@@ -124,10 +124,9 @@ class Client:
         return int(a[0]), int(a[1])
 
 
-username = "admin"
+username = "bob"
 password = ""
-key = get_key_from_password(username + password)
-client = Client(username, key, new=False)
+pub_key, priv_key = get_key_from_password(username + password)
 
 # new_login() -> 1:username déjà pris , 0:compte correctement créé, -1: erreur envoi serveur
 # login() -> 1:mauvais id ou mdp pour ce compte, 0:compte correctement connecté, -1: erreur envoi serveur
@@ -141,4 +140,4 @@ if __name__ == "__main__":
     print(client.get_friend())
     print(client.get_pending())
     print(client.get_request())
-    print(client.send_message("a", "salut"))
+    print(client.send_message("admin", "salut"))
