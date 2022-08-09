@@ -132,6 +132,25 @@ class Server:
         else:
             self.send("1", client_socket)
 
+    def friend_request(self, client_socket: socket.socket, user: User, friend_name: str):
+        if friend_name not in self.users or friend_name == user.username:
+            return self.send('1', client_socket)
+        self.users[friend_name].add_request(user.username)
+        user.add_pending(friend_name)
+        self.send('0', client_socket)
+
+    def accept_friend(self, client_socket: socket.socket, user: User, friend_name: str):
+        if friend_name not in user.get_requests():
+            return self.send("1", client_socket)
+        user.add_friend(friend_name)
+        self.users[friend_name].add_friend(user.username)
+        self.send("0", client_socket)
+
+    def get_friend_pub_key(self, client_socket: socket.socket, aes_key: bytes, user: User, friend_name: str):
+        if friend_name not in user.friends:
+            return self.send("1", client_socket)
+        self.send(aes.encrypt(self.users[friend_name].pub_key, aes_key), client_socket)
+
     def aes_data_receive(self, client_socket, data):
         client_data = self.clients[client_socket]
         aes_key = client_data["aes_key"]
@@ -139,12 +158,12 @@ class Server:
         action = data.split("|", 1)[0]
         data = data.removeprefix(action).removeprefix('|')
         match action:
-            case 'login':  # ex: "login|username
+            case 'login':  # ex: "login|username"
                 return self.login(client_data, client_socket, aes_key, data)
-            case 'check login':  # ex: "check login|check
+            case 'check login':  # ex: "check login|check"
                 return self.check_login(client_data, client_socket, int(data))
-            case 'sign up':  # ex: "sign up|user_key|username
-                #  TODO: check if user password is strong enough
+            case 'sign up':  # ex: "sign up|user_key|username"
+                # TODO: check if user password is strong enough
                 return self.sign_up(client_data, aes_key, client_socket, data)
         if "username" not in client_data or not client_data["auth"]:
             return self.send("-1", client_socket)
@@ -152,34 +171,21 @@ class Server:
         match action:
             case 'get friends':  # ex: "get friends"
                 return self.send(aes.encrypt(user.get_friends(), aes_key), client_socket)
-                # TODO change getter get_friend
-            case 'friend request':  # ex: "friend request|username TODO
-                # ???
-                if data[1] in self.users and data[1] != user.username:
-                    self.users[data[1]].add_request(user.username)
-                    user.add_pending(data[1])
-                    self.send('0', client_socket)
-                else:
-                    self.send('1', client_socket)
-            case 'get requests':  # ex: "get requests TODO
-                # ???
+            case 'friend request':  # ex: "friend request|username" TODO: send random number
+                return self.friend_request(client_socket, user, data)
+            case 'get requests':  # ex: "get requests"
                 return self.send(aes.encrypt(user.get_requests(), aes_key), client_socket)
-            case 'friend accept':  # ex: "friend accept|username TODO
-                # ???
-                if data[1] in user.get_requests() and data[1] != user.username:
-                    user.add_friend(data[1])
-                    self.users[data[1]].add_friend(user.username)
-                    self.send("0", client_socket)
-                else:
-                    self.send("1", client_socket)
-            case 'get pendings':  # ex: "get pendings TODO
+            case 'accept friend':  # ex: "accept friend|username" TODO: send random number
+                return self.accept_friend(client_socket, user, data)
+            case 'get pendings':  # ex: "get pendings"
                 return self.send(aes.encrypt(user.get_pendings(), aes_key), client_socket)
-            case 'getfriendkey':  # ex: "getfriendkey|username TODO
-                # ???
-                if data[1] in user.friends:
-                    self.send(aes.encrypt(self.users[data[1]].pub_key, aes_key), client_socket)
-                else:
-                    self.send("1", client_socket)
+            case 'get friend pub key':  # ex: "get friend pub key|username"
+                return self.get_friend_pub_key(client_socket, aes_key, user, data)
+            case 'get friend aes key':  # ex: "get friend aes key|username"
+                friend_name = data
+                if friend_name not in user.friends:
+                    return self.send("1", client_socket)
+                self.send(aes.encrypt(user.get_aes_key(friend_name), aes_key), client_socket)
             case 'message':  # ex: "message|content|username
                 # ???
                 content = data.split("|", 1)[0]

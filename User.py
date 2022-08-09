@@ -1,3 +1,5 @@
+import time
+
 from Message import Message
 
 
@@ -7,7 +9,7 @@ class User:
         if messages is None:
             messages = []
         if friends is None:
-            friends = []
+            friends = {}
         if requests is None:
             requests = []
         if pendings is None:
@@ -25,6 +27,10 @@ class User:
                 case _:
                     raise TypeError("Message must be a Message or a dict")
         self.friends = friends
+        """
+        {"bob": [(key, expiration, [m1, m2, m3]), (key, expiration, [m1, m2, m3])],
+         "alice": [(key, expiration, [m1, m2, m3]), (key, expiration, [m1, m2, m3]), (key, expiration, [m1])]}
+        """
         self.requests = requests
         self.pendings = pendings
 
@@ -32,7 +38,7 @@ class User:
         return str(self.__dict__())
 
     def get_friends(self):
-        return "|".join([f"{len(name)},{name}" for name in self.friends])
+        return "|".join([f"{len(name)},{name}" for name in self.friends.keys()])
 
     def get_requests(self):
         return "|".join([f"{len(name)},{name}" for name in self.requests])
@@ -41,7 +47,7 @@ class User:
         return "|".join([f"{len(name)},{name}" for name in self.pendings])
 
     def add_friend(self, friend):
-        self.friends.append(friend)
+        self.friends[friend] = []
         if friend in self.requests:
             self.requests.remove(friend)
         if friend in self.pendings:
@@ -54,6 +60,10 @@ class User:
         self.pendings.add(pending)
 
     def new_message(self, _message, _username):
+        for key, expiration, messages in self.friends[_username]:
+            if expiration >= int(time.time()):
+                messages.append(_message)
+                return True
         self.messages.append(Message(_username, _message))
 
     def get_messages(self):
