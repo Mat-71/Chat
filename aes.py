@@ -70,5 +70,5 @@ if __name__ == "__main__":
 
     bytes_encrypted = to_bytes(content)
     print(f"bytes_encrypted: {bytes_encrypted}")
-    decrypted = decrypt(bytes_encrypted, aes_key_bob)
-    print(f"decrypted: {decrypted}")
+    str_decrypted = decrypt(bytes_encrypted, aes_key_bob)
+    print(f"decrypted: {str_decrypted}")

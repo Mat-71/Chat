@@ -146,7 +146,7 @@ class Server:
         self.send("0", client_socket)
 
     def get_friend_pub_key(self, client_socket: socket.socket, aes_key: bytes, user: User, friend_name: str):
-        if friend_name not in user.friends:
+        if friend_name not in user.keys:
             return self.send("1", client_socket)
         self.send(aes.encrypt(self.users[friend_name].pub_key, aes_key), client_socket)
 
@@ -182,7 +182,7 @@ class Server:
                 return self.get_friend_pub_key(client_socket, aes_key, user, data)
             case 'get friend aes key':  # ex: "get friend aes key|username"
                 friend_name = data
-                if friend_name not in user.friends:
+                if friend_name not in user.keys:
                     return self.send("1", client_socket)
                 self.send(aes.encrypt(user.get_aes_key(friend_name), aes_key), client_socket)
             case 'message':  # ex: "message|content|username
@@ -190,7 +190,7 @@ class Server:
                 content = data.split("|", 1)[0]
                 username = data.removeprefix(action).removeprefix('|')
                 if isinstance(user, User):
-                    if username in user.friends:
+                    if username in user.keys:
                         self.users[username].new_message(content, user)
                         self.send(self.users[username].get_message()[-1].get_date(), client_socket)
                     else:
