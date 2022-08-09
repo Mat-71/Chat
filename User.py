@@ -16,13 +16,13 @@ class User:
             pendings = {}
         self.username = username
         self.pub_key = pub_key
-        self.messages = []
-        for message in messages:
-            match message:
+        self.messages = {}
+        for message in messages.keys():
+            match messages[message]:
                 case Message():
-                    self.messages.append(message)
+                    self.messages[message] = messages[message]
                 case dict():
-                    self.messages.append(Message(**message))
+                    self.messages[message] = Message(**messages[message])
                 case _:
                     raise TypeError("Message must be a Message or a dict")
         """
@@ -47,16 +47,17 @@ class User:
     def add_friend(self, friend, key):
         self.keys[friend] = [key]
         if friend in self.requests:
-            self.requests.remove(friend)
+            self.keys[friend].append(self.requests[friend])
+            self.requests.pop(friend, None)
         if friend in self.pendings:
             self.keys[friend].append(self.pendings[friend])
             self.pendings.pop(friend, None)
 
-    def add_request(self, request):
-        self.requests.add(request)
+    def add_request(self, username: str, key: bytes):
+        self.requests[username] = key
 
-    def add_pending(self, pending):
-        self.pendings.add(pending)
+    def add_pending(self, username: str, key: bytes):
+        self.pendings[username] = key
 
     def new_message(self, _message, _username):
         for key, expiration, messages in self.keys[_username]:
