@@ -5,6 +5,8 @@ import hashlib
 from Cryptodome.Cipher import AES
 from Cryptodome.Random import get_random_bytes
 
+from conversion import from_bytes, to_bytes
+
 
 def encrypt(plain_text: str, password: bytes) -> bytes:
     # generate a random salt
@@ -44,12 +46,29 @@ def decrypt(encrypted: bytes, password: bytes) -> str:
 
 
 if __name__ == "__main__":
-    _password = b"admin"
+    aes_key_s = b'\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab'
+    aes_key_bob = b'\xab\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab'
+    username = "bob"
+    content = "Hello Bob"
 
-    # First let us encrypt secret message
-    _encrypted = encrypt("This is totally secret!!!vvvvvvveeeeeeeeerrrrrrrrrrryyyyyyyyyyy lllllllooooooooonnnnnnnnnnnnnnggggggggggggg", _password)
-    print(_encrypted)
+    bytes_encrypted = encrypt(content, aes_key_bob)
+    str_encrypted = from_bytes(bytes_encrypted, str)
+    print(f"Encrypted (bytes): {bytes_encrypted}")
+    print(f"Encrypted (str): {str_encrypted}")
+    print()
+    message = f"message|{len(username)}|{username}|{str_encrypted}"
+    encrypted_message = encrypt(message, aes_key_s)
 
-    # Let us decrypt using our original password
-    _decrypted = decrypt(_encrypted, _password)
-    print(_decrypted)
+    serveur_message = decrypt(encrypted_message, aes_key_s)
+    action, username_length, data = serveur_message.split("|", 2)
+    username = data[:int(username_length)]
+    content = data[int(username_length) + 1:]
+    print(f"action: {action}")
+    print(f"username: {username}")
+    print(f"content: {content}")
+    print()
+
+    bytes_encrypted = to_bytes(content)
+    print(f"bytes_encrypted: {bytes_encrypted}")
+    decrypted = decrypt(bytes_encrypted, aes_key_bob)
+    print(f"decrypted: {decrypted}")

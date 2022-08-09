@@ -110,28 +110,26 @@ class Server:
         key = self.users[username].pub_key
         self.send(aes.encrypt(str(rsa.crypt(_check, key)), aes_key), client_socket)
 
-    def check_login(self, client_data: dict, client_socket: socket.socket, check: int):
+    def check_login(self, client_data: dict, client_socket: socket.socket, aes_key: bytes, check: int):
         if "check" not in client_data or "username" not in client_data:
             return
-        if client_data["check"] == check:
-            self.send('0', client_socket)
-            print('Accepted new connection from {}'.format(client_data["username"]))
-            client_data["auth"] = True
-        else:
-            self.send('1', client_socket)
+        if client_data["check"] != check:
+            return self.send(aes.encrypt("1", aes_key), client_socket)
+        self.send('0', client_socket)
+        print('Accepted new connection from {}'.format(client_data["username"]))
+        client_data["auth"] = True
 
     def sign_up(self, client_data: dict, aes_key: bytes, client_socket: socket.socket, data: str):
         user_key = data.split("|", 1)[0]
         username = data.removeprefix(user_key).removeprefix('|')
         user_key = int(user_key)
-        if username not in self.users and user_key > 0 and len(username) > 3:
-            client_data['username'] = username
-            client_data['auth'] = True
-            self.users[data[2]] = User(username, user_key)
-            print('Accepted new connection from {}'.format(username))
-            self.send(aes.encrypt("0", aes_key), client_socket)
-        else:
-            self.send("1", client_socket)
+        if username in self.users or user_key <= 0 or len(username) <= 3:
+            return self.send(aes.encrypt("1", aes_key), client_socket)
+        client_data['username'] = username
+        client_data['auth'] = True
+        self.users[data[2]] = User(username, user_key)
+        print('Accepted new connection from {}'.format(username))
+        self.send(aes.encrypt("0", aes_key), client_socket)
 
     def friend_request(self, client_socket: socket.socket, user: User, friend_name: str):
         if friend_name not in self.users or friend_name == user.username:
@@ -162,7 +160,7 @@ class Server:
             case 'login':  # ex: "login|username"
                 return self.login(client_data, client_socket, aes_key, data)
             case 'check login':  # ex: "check login|check"
-                return self.check_login(client_data, client_socket, int(data))
+                return self.check_login(client_data, client_socket, aes_key, int(data))
             case 'sign up':  # ex: "sign up|user_key|username"
                 # TODO: check if user password is strong enough
                 return self.sign_up(client_data, aes_key, client_socket, data)
@@ -180,7 +178,7 @@ class Server:
                 return self.accept_friend(client_socket, user, data)
             case 'get pendings':  # ex: "get pendings"
                 return self.send(aes.encrypt(user.get_pendings(), aes_key), client_socket)
-            case 'get friend pub key':  # ex: "get friend pub key|username"
+            case 'get pub key':  # ex: "get friend pub key|username"
                 return self.get_friend_pub_key(client_socket, aes_key, user, data)
             case 'get friend aes key':  # ex: "get friend aes key|username"
                 friend_name = data
@@ -228,7 +226,7 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server("lodalhost", 42690, "5", 8)
+    server = Server("", 42690, "5", 8)
     print(f'Listening for connections on {server.IP}: {server.PORT}...')
     while True:
         server.listen()

@@ -1,5 +1,5 @@
 def str_to_bytes(data: str) -> bytes:
-    return data.encode('utf-8')
+    return bytes([ord(c) for c in data])
 
 
 def int_to_bytes(data: int) -> bytes:
@@ -25,7 +25,7 @@ def to_bytes(data: bytes | str | int | float) -> bytes:
 
 
 def bytes_to_str(data: bytes) -> str:
-    return data.decode('utf-8')
+    return "".join(map(lambda c: chr(int(c)), data))
 
 
 def bytes_to_int(data: bytes) -> int:
