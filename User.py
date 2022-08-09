@@ -14,7 +14,6 @@ class User:
             requests = []
         if pendings is None:
             pendings = []
-
         self.username = username
         self.pub_key = pub_key
         self.messages = []
@@ -53,6 +52,13 @@ class User:
         if friend in self.pendings:
             self.pendings.remove(friend)
 
+    def add_aes_key(self, friend, key):
+        t = int(time.time())
+        for _, expiration, _ in self.friends[friend]:
+            if expiration >= t:
+                return
+        self.friends[friend].append((key, int(time.time() + 24 * 60 * 60), []))
+
     def add_request(self, request):
         self.requests.add(request)
 
@@ -73,8 +79,9 @@ class User:
         return {
             "username": self.username,
             "pub_key": self.pub_key,
-            "friends": list(self.friends),
-            "requests": list(self.requests),
-            "pendings": list(self.pendings),
+            "friends": self.friends,
+            "requests": self.requests,
+            "pendings": self.pendings,
             "messages": [message.__dict__ for message in self.messages]
         }
+

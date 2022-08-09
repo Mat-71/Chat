@@ -76,7 +76,8 @@ class Server:
                 return False
             message_length = from_bytes(message_header, int)
             return from_bytes(client_socket.recv(message_length), target_type)
-        except Exception:
+        except Exception as e:
+            print(e)
             return False
 
     def header(self, message: bytes) -> bytes:
