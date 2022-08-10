@@ -27,7 +27,7 @@ class Server:
         self.clients = {socket: {"username": username, "aes_key": aes_key, "check": check, "pub_key": pub_key, "auth": auth}}
         """
         self.pub_key, self.priv_key = get_key_from_password(password, key_size)
-        print(self.pub_key)
+        print("pub_key", self.pub_key)
         self.file_number = 0
         self.load()
 
@@ -66,11 +66,12 @@ class Server:
             message_length = from_bytes(message_header, int)
             return from_bytes(client_socket.recv(message_length), target_type)
         except Exception as e:
-            print(e)
+            print("Exception (receive):", e)
             return False
 
     def header(self, message: bytes) -> bytes:
-        return b'\x00' * (self.HEADER_LENGTH - len(message)) + message
+        message_header = to_bytes(len(message))
+        return b'\x00' * (self.HEADER_LENGTH - len(message_header)) + message_header
 
     def send(self, _message, _client):
         _message = to_bytes(_message)
@@ -91,6 +92,7 @@ class Server:
         c_rand_num = rsa.crypt(int(c_rand_num), self.priv_key)
         c_pub_key = int(c_pub_key)
         s_rand_num = random_number(80)
+        print(c_pub_key, c_rand_num)
         aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num)
         self.clients[client_socket] = {"aes_key": aes_key, "auth": False}
         self.send(rsa.crypt(s_rand_num, rsa.crypt(c_pub_key, self.priv_key)), client_socket)
@@ -209,8 +211,8 @@ class Server:
                 return self.send_fail(client_socket, aes_key)
 
     def listen_client(self, client_socket: socket.socket, data: str | bool | bytes):
-        print(data)
-        if data is False:
+        print("data:", data)
+        if not data:
             return self.sockets_list.remove(client_socket)
         if data == 'key':  # send key to client
             return self.send_public_key(client_socket)

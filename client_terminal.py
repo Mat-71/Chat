@@ -37,6 +37,12 @@ class Client:
         self.is_connected = 1
         self.load()
 
+    def start_transmission(self):
+        return
+
+    def end_transmission(self):
+        return
+
     def connexion(self, new: bool) -> bool:
         if new:
             return self.sign_up()
