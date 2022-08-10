@@ -102,6 +102,7 @@ class Server:
         _check = random_number(2024)
         client_data['check'] = _check
         client_data['username'] = username
+        client_data["auth"] = False
         key = self.users[username].pub_key
         self.send(aes.encrypt(str(rsa.crypt(_check, key)), aes_key), client_socket)
 
@@ -208,6 +209,7 @@ class Server:
                 return self.send_fail(client_socket, aes_key)
 
     def listen_client(self, client_socket: socket.socket, data: str | bool | bytes):
+        print(data)
         if data is False:
             return self.sockets_list.remove(client_socket)
         if data == 'key':  # send key to client
