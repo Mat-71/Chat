@@ -160,6 +160,15 @@ class Server:
             return self.send_fail(client_socket, aes_key, 1)
         self.send(aes.encrypt(user.get_aes_key(friend_name), aes_key), client_socket)
 
+    def message_reception(self, client_socket: socket.socket, aes_key: bytes, user: User, data: str):
+        # data = "USERNAME_LENGTH|USERNAME|CONTENT"
+        username_length, data = data.split("|", 1)
+        friend, content = data[:int(username_length)], data[int(username_length) + 1:]
+        if friend not in user.keys:
+            return self.send_fail(client_socket, aes_key, 1)
+        sent_time = self.users[friend].new_message(content, user.username)
+        self.send(aes.encrypt(sent_time, aes_key), client_socket)
+
     def aes_data_receive(self, client_socket, data):
         client_data = self.clients[client_socket]
         aes_key = client_data["aes_key"]
@@ -175,8 +184,8 @@ class Server:
                 # TODO: check if user password is strong enough
                 return self.sign_up(client_data, aes_key, client_socket, data)
         if "username" not in client_data or not client_data["auth"]:
-            return self.send("-1", client_socket)
-        user = self.users[client_data["username"]] if "username" in client_data else None
+            return self.send_fail(client_socket, aes_key)
+        user = self.users[client_data["username"]]
         match action:
             case 'get friends':
                 return self.send(aes.encrypt(user.get_friends(), aes_key), client_socket)
@@ -190,21 +199,12 @@ class Server:
                 return self.send(aes.encrypt(user.get_pendings(), aes_key), client_socket)
             case 'get pub key':
                 return self.get_pub_key(client_socket, aes_key, data)
-            case 'get friend aes key':
+            case 'get aes key':
                 return self.get_aes_key(client_socket, aes_key, user, data)
-            case 'message':  # ex: "len(username)|username|content
-                username_length, data = data.split("|", 1)
-                username, content = data[:int(username_length)], data[int(username_length) + 1:]
-                if isinstance(user, User):
-                    if username in user.keys:
-                        self.users[username].new_message(content, user.username)
-                        self.send(self.users[username].get_message()[-1].get_date(), client_socket)
-                    else:
-                        self.send_fail(client_socket, aes_key, 1)
-                else:
-                    self.send_fail(client_socket, aes_key, 2)
+            case 'message':
+                return self.message_reception(client_socket, aes_key, user, data)
             case _:
-                self.send_fail(client_socket, aes_key)
+                return self.send_fail(client_socket, aes_key)
 
     def listen_client(self, client_socket: socket.socket, data: str | bool | bytes):
         if data is False:
