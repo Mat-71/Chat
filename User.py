@@ -54,8 +54,10 @@ class User:
     def add_pending(self, username: str, key: str):
         self.pendings[username] = key
 
-    def new_message(self, content: str, username: str):
-        self.messages.append(Message(username, content))
+    def new_message(self, content: str, username: str) -> str:
+        message = Message(username, content)
+        self.messages.append(message)
+        return str(message.sent_time)
 
     def remove_message(self, sent_time: int):
         for message in self.messages:
