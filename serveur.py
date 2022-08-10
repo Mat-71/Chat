@@ -27,6 +27,7 @@ class Server:
         self.clients = {socket: {"username": username, "aes_key": aes_key, "check": check, "pub_key": pub_key, "auth": auth}}
         """
         self.pub_key, self.priv_key = get_key_from_password(password, key_size)
+        print(self.pub_key)
         self.file_number = 0
         self.load()
 
@@ -57,7 +58,7 @@ class Server:
         with open(file_name, 'w') as outfile:
             outfile.write(json.dumps([int(time.time() * 1000), [u.__dict__() for u in self.users.values()]], indent=2))
 
-    def receive_message(self, client_socket, target_type: type = str):
+    def receive(self, client_socket, target_type: type = str):
         try:
             message_header = client_socket.recv(self.HEADER_LENGTH)
             if not len(message_header):
@@ -85,14 +86,14 @@ class Server:
         self.send(self.pub_key, client_socket)
 
     def aes_protocol(self, client_socket: socket.socket, data: str):
-        data = data.split('|')
-        if len(data) != 2:
-            return
-        server_random_number = random_number(80)
-        self.send(rsa.crypt(server_random_number, rsa.crypt(int(data[0]), self.priv_key)), client_socket)
-        client_random_number = rsa.crypt(int(data[2]), self.priv_key)
-        aes_key = client_random_number.to_bytes(10, 'big') + server_random_number.to_bytes(10, 'big')
+        # data = "RAND_NUM|PUB_KEY"
+        c_rand_num, c_pub_key = data.split("|", 1)
+        c_rand_num = rsa.crypt(int(c_rand_num), self.priv_key)
+        c_pub_key = int(c_pub_key)
+        s_rand_num = random_number(80)
+        aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num)
         self.clients[client_socket] = {"aes_key": aes_key, "auth": False}
+        self.send(rsa.crypt(s_rand_num, rsa.crypt(c_pub_key, self.priv_key)), client_socket)
 
     def login(self, client_data: dict, aes_key: bytes, client_socket: socket.socket, username: str):
         # data = "USERNAME"
@@ -224,7 +225,7 @@ class Server:
             if notified_socket == self.server_socket:
                 self.sockets_list.append(self.server_socket.accept()[0])
             else:
-                self.listen_client(notified_socket, self.receive_message(notified_socket))
+                self.listen_client(notified_socket, self.receive(notified_socket))
         for notified_socket in exception_sockets:
             self.sockets_list.remove(notified_socket)
             if notified_socket in self.clients:
@@ -232,7 +233,7 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server("", 42690, "5", 8)
+    server = Server("", 444, "5", 12)
     print(f'Listening for connections on {server.IP}: {server.PORT}...')
     while True:
         server.listen()

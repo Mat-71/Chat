@@ -12,39 +12,68 @@ sys.setrecursionlimit(15000)
 
 
 class Client:
-    def __init__(self, _username: str, pub_key: int, priv_key: tuple[int, int], new=True):
+    def __init__(self, _username: str, pub_key: int, priv_key: tuple[int, int], new: bool = False):
         self.IP = "localhost"
         self.PORT = 42690
         self.HEADER_LENGTH = 10
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.connect((self.IP, self.PORT))
-        self.client_socket.setblocking(False)
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.connect((self.IP, self.PORT))
+        self.server_socket.setblocking(False)
         self.username = _username
         self.pub_key = pub_key
         self.priv_key = priv_key
-        self.s_key = 0
+        self.messages = {}  # messages = {friend: [message, message, message]}
+        self.keys = {}  # key = {"username": aes_key}
+        self.requests = {}  # requests = {"username": key}
+        self.pendings = {}  # pendings = {"username": key}
         self.is_connected = -1
 
-    def start_protocol(self, new):
-        self._send("key")
-        self.s_key = int(self.receive())
+        self.s_aes = self.aes_protocol()
+        if self.s_aes is None:
+            return
+        self.is_connected = 0
+        if not self.connexion(new):
+            return
+        self.is_connected = 1
+        self.load()
+
+    def connexion(self, new: bool) -> bool:
         if new:
-            self.is_connected = self.new_login()
-        else:
-            self.is_connected = self.login()
+            return self.sign_up()
+        return self.login()
 
-    def get_state(self):
-        return self.is_connected
+    def aes_protocol(self) -> bytes:
+        # aes|RAND_NUM|PUB_KEY
+        self._send("key")
+        s_key = self.receive(int)
+        c_rand_num = rsa.crypt(random_number(80), s_key)
+        self._send(f"aes|{c_rand_num}|{self.pub_key}")
+        s_rand_num = rsa.crypt(int(self.receive()), self.priv_key)
+        return to_bytes(c_rand_num) + to_bytes(s_rand_num) if s_rand_num != -1 else None
 
-    def receive(self):
+    def receive(self, target_type: type = str):
+        """
         while True:
             try:
-                header = self.client_socket.recv(self.HEADER_LENGTH)
+                message_header = self.server_socket.recv(self.HEADER_LENGTH)
+                if not len(message_header):
+                    print('Connection closed by the server')
+                    return False
+                message_length = from_bytes(message_header, int)
+                return from_bytes(self.server_socket.recv(message_length), target_type)
+            except Exception as e:
+                print(e)
+                return
+
+
+
+            try:
+                header = self.server_socket.recv(self.HEADER_LENGTH)
                 if not len(header):
                     print('Connection closed by the server')
                     sys.exit()
                 header = int(header.decode('utf-8').strip())
-                m = from_bytes(self.client_socket.recv(header), str)
+                m = from_bytes(self.server_socket.recv(header), str)
                 return m
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
@@ -53,12 +82,13 @@ class Client:
             except Exception as e:
                 print('Reading error: '.format(str(e)))
                 sys.exit()
+        """
 
     def _send(self, _message):
         if type(_message) != bytes:
             _message = bytes(_message, 'utf-8')
         header = f"{len(_message):<{self.HEADER_LENGTH}}".encode('utf-8')
-        self.client_socket.send(header + _message)
+        self.server_socket.send(header + _message)
 
     def login(self):
         user = encrypt('login|' + self.username, self.s_key)
@@ -72,7 +102,7 @@ class Client:
             return 0
         return 1
 
-    def new_login(self):
+    def sign_up(self):
         self._send(encrypt(
             'newlogin|' + str(self.pub_key) + "," + str(self.key[0][1]) + "|" + self.username,
             self.s_key))
@@ -128,7 +158,7 @@ username = "bob"
 password = ""
 pub_key, priv_key = get_key_from_password(username + password)
 
-# new_login() -> 1:username déjà pris , 0:compte correctement créé, -1: erreur envoi serveur
+# sign_up() -> 1:username déjà pris , 0:compte correctement créé, -1: erreur envoi serveur
 # login() -> 1:mauvais id ou mdp pour ce compte, 0:compte correctement connecté, -1: erreur envoi serveur
 
 if __name__ == "__main__":

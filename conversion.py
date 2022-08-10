@@ -3,7 +3,11 @@ def str_to_bytes(data: str) -> bytes:
 
 
 def int_to_bytes(data: int) -> bytes:
-    return str_to_bytes(str(data))
+    r = b""
+    while data > 0:
+        r = bytes([data % 256]) + r
+        data //= 256
+    return r
 
 
 def float_to_bytes(data: float) -> bytes:
@@ -29,7 +33,10 @@ def bytes_to_str(data: bytes) -> str:
 
 
 def bytes_to_int(data: bytes) -> int:
-    return int(bytes_to_str(data))
+    r = 0
+    for b in data:
+        r = r * 256 + int(b)
+    return r
 
 
 def bytes_to_float(data: bytes) -> float:
