@@ -1,36 +1,24 @@
-import time
-
 from Message import Message
 
 
 class User:
-    def __init__(self, username: str, pub_key: int, messages: dict = None, keys: dict = None, requests: dict = None,
-                 pendings: dict = None):
+    def __init__(self, username: str, pub_key: int, messages: list[dict[str, str | int]] = None,
+                 keys: dict[str, tuple[str, str]] = None, requests: dict[str, str] = None,
+                 pendings: dict[str, str] = None):
         if messages is None:
             messages = {}
         if keys is None:
-            keys = {}
+            keys: dict[str, tuple[str, str]] = {}
         if requests is None:
             requests = {}
         if pendings is None:
             pendings = {}
         self.username = username
         self.pub_key = pub_key
-        self.messages = {}
-        for message in messages.keys():
-            match messages[message]:
-                case Message():
-                    self.messages[message] = messages[message]
-                case dict():
-                    self.messages[message] = Message(**messages[message])
-                case _:
-                    raise TypeError("Message must be a Message or a dict")
-        """
-        message = {"username": [message, message, message], "username": [message, message, message]}
-        """
-        self.keys = keys
-        self.requests = requests
-        self.pendings = pendings
+        self.messages = [Message(**message) for message in messages]  # messages = [message, message, message]
+        self.keys = keys  # key = {"username": (key_part_1, key_part_2)}
+        self.requests = requests  # requests = {"username": key}
+        self.pendings = pendings  # pendings = {"username": key}
 
     def __repr__(self):
         return str(self.__dict__())
@@ -39,42 +27,44 @@ class User:
         return "|".join([f"{len(name)},{name}" for name in self.keys])
 
     def get_requests(self):
-        return "|".join([f"{len(name)},{name}" for name in self.requests])
+        return "|".join([f"{len(name)}|{name}" for name in self.requests])
 
     def get_pendings(self):
-        return "|".join([f"{len(name)},{name}" for name in self.pendings])
+        return "|".join([f"{len(name)}|{name}" for name in self.pendings])
 
-    def add_friend(self, friend, key):
-        self.keys[friend] = [key]
-        if friend in self.requests:
-            self.keys[friend].append(self.requests[friend])
-            self.requests.pop(friend, None)
+    def get_messages(self, n: int = 0) -> str:
+        if n == 0:
+            return "|".join([f"{len(str(message))}|{message}" for message in self.messages])
+        return "|".join([f"{len(str(message))}|{message}" for message in self.messages[:n]])
+
+    def add_friend(self, friend: str, key: str):
         if friend in self.pendings:
-            self.keys[friend].append(self.pendings[friend])
-            self.pendings.pop(friend, None)
+            key_part_1 = self.pendings[friend]
+            self.pendings.pop(friend)
+            key_part_2 = key
+        else:
+            key_part_2 = self.requests[friend]
+            self.requests.pop(friend)
+            key_part_1 = key
+        self.keys[friend] = (key_part_1, key_part_2)
 
-    def add_request(self, username: str, key: bytes):
+    def add_request(self, username: str, key: str):
         self.requests[username] = key
 
-    def add_pending(self, username: str, key: bytes):
+    def add_pending(self, username: str, key: str):
         self.pendings[username] = key
 
-    def new_message(self, _message, _username):
-        for key, expiration, messages in self.keys[_username]:
-            if expiration >= int(time.time()):
-                messages.append(_message)
-                return True
-        self.messages.append(Message(_username, _message))
+    def new_message(self, content: str, username: str):
+        self.messages.append(Message(username, content))
 
-    def get_messages(self):
-        return self.messages
+    def remove_message(self, sent_time: int):
+        for message in self.messages:
+            if message.sent_time == sent_time:
+                self.messages.remove(message)
+                return
 
-    def __dict__(self):
-        return {
-            "username": self.username,
-            "pub_key": self.pub_key,
-            "friends": self.keys,
-            "requests": self.requests,
-            "pendings": self.pendings,
-            "messages": [message.__dict__ for message in self.messages]
-        }
+
+if __name__ == "__main__":
+    _message = Message("redipac", "Hello world!")
+    _user = User("redipac", 12345, [_message.__dict__, _message.__dict__], {"redipac": ("key_part_1", "key_part_2")})
+    print(_user.get_messages())

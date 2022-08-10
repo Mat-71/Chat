@@ -3,13 +3,16 @@ import datetime
 
 
 class Message:
-    def __init__(self, username: str, content: str, sent_time: int = time.time() * 1000):
+    def __init__(self, username: str, content: str, sent_time: int = int(time.time() * 1000)):
         self.username = username
         self.content = content
         self.sent_time = sent_time
 
     def __repr__(self):
         return f'{len(self.username)}|{self.sent_time}|{self.username}|{self.content}'
+
+    def __repr__(self):
+        return str(self.__dict__)
 
     def user_print(self) -> str:
         return f"{self.username} [{self.date_str()}]: {self.content}"
