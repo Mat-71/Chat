@@ -6,13 +6,13 @@ class User:
                  keys: dict[str, tuple[str, str]] = None, requests: dict[str, str] = None,
                  pendings: dict[str, str] = None):
         if messages is None:
-            messages = {}
+            messages = []
         if keys is None:
             keys: dict[str, tuple[str, str]] = {}
         if requests is None:
-            requests = {}
+            requests: dict[str, str] = {}
         if pendings is None:
-            pendings = {}
+            pendings: dict[str, str] = {}
         self.username = username
         self.pub_key = pub_key
         self.messages = [Message(**message) for message in messages]  # messages = [message, message, message]
@@ -20,11 +20,11 @@ class User:
         self.requests = requests  # requests = {"username": key}
         self.pendings = pendings  # pendings = {"username": key}
 
-    def __repr__(self):
-        return str(self.__dict__())
-
     def get_friends(self):
-        return "|".join([f"{len(name)},{name}" for name in self.keys])
+        return "|".join([f"{len(name)}|{name}" for name in self.keys])
+
+    def get_aes_key(self, username: str) -> str:
+        return "|".join([f"{len(key)}|{key}" for key in self.keys[username]])
 
     def get_requests(self):
         return "|".join([f"{len(name)}|{name}" for name in self.requests])

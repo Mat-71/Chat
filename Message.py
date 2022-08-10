@@ -8,7 +8,7 @@ class Message:
         self.content = content
         self.sent_time = sent_time
 
-    def __repr__(self):
+    def __str__(self):
         return f'{len(self.username)}|{self.sent_time}|{self.username}|{self.content}'
 
     def __repr__(self):

@@ -8,18 +8,6 @@ import aes
 from User import User
 from conversion import to_bytes, from_bytes
 
-"""
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server_socket.bind((IP, PORT))
-server_socket.listen()
-sockets_list = [server_socket]
-users = {}
-client = {}
-client1 = {}
-f = 0
-pub_key, priv_key = get_key_from_password('5', 8)"""
-
 
 class Server:
     def __init__(self, ip: str, port: int, password: str, key_size: int):
@@ -87,6 +75,12 @@ class Server:
         _message = to_bytes(_message)
         _client.send(self.header(_message) + _message)
 
+    def send_success(self, _client: socket, key: bytes):
+        self.send(aes.encrypt("0", key), _client)
+
+    def send_fail(self, _client: socket, key: bytes, reason: int = -1):
+        self.send(aes.encrypt(str(reason), key), _client)
+
     def send_public_key(self, client_socket: socket.socket):
         self.send(self.pub_key, client_socket)
 
@@ -103,8 +97,7 @@ class Server:
     def login(self, client_data: dict, aes_key: bytes, client_socket: socket.socket, username: str):
         # data = "USERNAME"
         if username not in self.users:
-            self.send("1", client_socket)
-            return
+            return self.send_fail(client_socket, aes_key, 1)
         _check = random_number(2024)
         client_data['check'] = _check
         client_data['username'] = username
@@ -116,8 +109,8 @@ class Server:
         if "check" not in client_data or "username" not in client_data:
             return
         if client_data["check"] != check:
-            return self.send(aes.encrypt("1", aes_key), client_socket)
-        self.send('0', client_socket)
+            return self.send_fail(client_socket, aes_key, 1)
+        self.send_success(client_socket, aes_key)
         print('Accepted new connection from {}'.format(client_data["username"]))
         client_data["auth"] = True
 
@@ -131,21 +124,31 @@ class Server:
         client_data['auth'] = True
         self.users[data[2]] = User(username, user_pub_key)
         print('Accepted new connection from {}'.format(username))
-        self.send(aes.encrypt("0", aes_key), client_socket)
+        self.send_success(client_socket, aes_key)
 
-    def friend_request(self, client_socket: socket.socket, user: User, friend_name: str):
+    def friend_request(self, aes_key: bytes, client_socket: socket.socket, user: User, data: str):
+        # data = "USERNAME_LENGTH|USERNAME|RAND_NUM_USER_LENGTH|RAND_NUM_USER|RAND_NUM_FRIEND"
+        username_length, data = data.split("|", 1)
+        friend_name, data = data[:int(username_length)], data[int(username_length) + 1:]
+        key_user_length, data = data.split("|", 1)
+        key_user, key_friend = data[:int(key_user_length)], data[int(key_user_length) + 1:]
         if friend_name not in self.users or friend_name == user.username:
             return self.send_fail(client_socket, aes_key, 1)
         self.users[friend_name].add_request(user.username, key_friend)
         user.add_pending(friend_name, key_user)
         self.send_success(client_socket, aes_key)
 
-    def accept_friend(self, client_socket: socket.socket, user: User, friend_name: str):
+    def accept_friend(self, aes_key: bytes, client_socket: socket.socket, user: User, data: str):
+        # data = USERNAME_LENGTH|USERNAME|RAND_NUM_USER_LENGTH|RAND_NUM_USER|RAND_NUM_FRIEND
+        username_length, data = data.split("|", 1)
+        friend_name, data = data[:int(username_length)], data[int(username_length) + 1:]
+        key_user_length, data = data.split("|", 1)
+        key_user, key_friend = data[:int(key_user_length)], data[int(key_user_length) + 1:]
         if friend_name not in user.get_requests():
-            return self.send("1", client_socket)
-        user.add_friend(friend_name)
-        self.users[friend_name].add_friend(user.username)
-        self.send("0", client_socket)
+            return self.send_fail(client_socket, aes_key, 1)
+        user.add_friend(friend_name, key_user)
+        self.users[friend_name].add_friend(user.username, key_friend)
+        self.send_success(client_socket, aes_key)
 
     def get_pub_key(self, client_socket: socket.socket, aes_key: bytes, friend_name: str):
         if friend_name not in self.users:
@@ -173,7 +176,7 @@ class Server:
                 return self.sign_up(client_data, aes_key, client_socket, data)
         if "username" not in client_data or not client_data["auth"]:
             return self.send("-1", client_socket)
-        user = self.users[client_data["username"]]
+        user = self.users[client_data["username"]] if "username" in client_data else None
         match action:
             case 'get friends':
                 return self.send(aes.encrypt(user.get_friends(), aes_key), client_socket)
@@ -181,9 +184,9 @@ class Server:
                 return self.friend_request(aes_key, client_socket, user, data)
             case 'get requests':
                 return self.send(aes.encrypt(user.get_requests(), aes_key), client_socket)
-            case 'accept friend':  # ex: "accept friend|username" TODO: send random number
-                return self.accept_friend(client_socket, user, data)
-            case 'get pendings':  # ex: "get pendings"
+            case 'accept friend':
+                return self.accept_friend(aes_key, client_socket, user, data)
+            case 'get pendings':
                 return self.send(aes.encrypt(user.get_pendings(), aes_key), client_socket)
             case 'get pub key':
                 return self.get_pub_key(client_socket, aes_key, data)
@@ -194,14 +197,14 @@ class Server:
                 username, content = data[:int(username_length)], data[int(username_length) + 1:]
                 if isinstance(user, User):
                     if username in user.keys:
-                        self.users[username].new_message(content, user)
+                        self.users[username].new_message(content, user.username)
                         self.send(self.users[username].get_message()[-1].get_date(), client_socket)
                     else:
-                        self.send("1", client_socket)
+                        self.send_fail(client_socket, aes_key, 1)
                 else:
-                    self.send("-1", client_socket)
+                    self.send_fail(client_socket, aes_key, 2)
             case _:
-                print("erreur commande")
+                self.send_fail(client_socket, aes_key)
 
     def listen_client(self, client_socket: socket.socket, data: str | bool | bytes):
         if data is False:
@@ -213,7 +216,7 @@ class Server:
         if client_socket in self.clients and isinstance(data, bytes):  # connection is secure
             self.aes_data_receive(client_socket, data)
         else:
-            print("connexion non securisée")
+            self.send("-1", client_socket)
 
     def listen(self):
         read_sockets, _, exception_sockets = select.select(self.sockets_list, [], self.sockets_list)
