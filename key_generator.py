@@ -33,7 +33,7 @@ def inv_mod(e: int, phi: int) -> int:
         r1, r2 = r2, r1 - q * r2
         u1, u2 = u2, u1 - q * u2
         v1, v2 = v2, v1 - q * v2
-    return u1
+    return u1 % phi
 
 
 def rsa_key_gen(primes: tuple[int, int]) -> (int, (int, int)):
@@ -57,5 +57,5 @@ if __name__ == "__main__":
     import time
 
     start = time.time()
-    print(get_key_from_password("azerty"))
+    print(get_key_from_password("azerty", 64)[0])
     print(time.time() - start)
