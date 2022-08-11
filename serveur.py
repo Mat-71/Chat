@@ -55,7 +55,7 @@ class Server:
         file_name = f"user{str(self.file_number)}.json"
         self.file_number = (self.file_number + 1) % 3
         with open(file_name, 'w') as outfile:
-            outfile.write(json.dumps([int(time.time() * 1000), [u.__dict__() for u in self.users.values()]], indent=2))
+            outfile.write(json.dumps([int(time.time() * 1000), [u.__dict__ for u in self.users.values()]], indent=2))
 
     def receive(self, client: socket.socket, target_type: type = str):
         try:
