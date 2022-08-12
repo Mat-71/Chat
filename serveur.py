@@ -102,7 +102,7 @@ class Server:
     def login(self, client_data: dict, aes_key: bytes, client: socket.socket, username: str):
         # data = "USERNAME"
         if username not in self.users:
-            return self.send_fail(client, aes_key, 1)
+            return self.send_fail(client, aes_key)
         _check = random_number(2024)
         client_data['check'] = _check
         client_data['username'] = username

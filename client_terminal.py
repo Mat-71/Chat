@@ -25,8 +25,8 @@ class Client:
         self.priv_key = priv_key
         self.messages = {}  # messages = {friend: [message, message, message]}
         self.keys = {}  # key = {"username": aes_key}
-        self.requests = {}  # requests = {"username": key}
-        self.pendings = {}  # pendings = {"username": key}
+        self.requests = []  # requests = {"username": key}
+        self.pendings = []  # pendings = {"username": key}
         self.is_connected = -1
         self.server_aes_key = None
         self.last_ping = time.time()
@@ -118,27 +118,49 @@ class Client:
         check = rsa.crypt(data, self.priv_key)
         self.send_aes(f"check|{check}")
         if self.receive() == "0":
-            return 0
+            return True
         return 1
 
     def sign_up(self):
         self.send(aes.encrypt(f"sign up|{self.pub_key}|{self.username}", self.server_aes_key))
         return self.receive() == "0"
 
-    def get_friend(self):
-        self.send(encrypt("getfriend|", self.s_key))
-        a = decrypt(self.receive(), self.priv_key)
-        return a.split("|") if a != "" else []
+    def get_friends(self):
+        self.send_aes("get friend")
+        data = self.receive_aes()
+        while len(data) > 0:
+            size_username, data = data.split("|", 1)
+            username, data = data[:int(size_username)], data[int(size_username) + 1:]
+            if username not in self.keys:
+                self.get_aes_key(username)
 
-    def get_pending(self):
-        self.send(encrypt("getpending|", self.s_key))
-        a = decrypt(self.receive(), self.key[1])
-        return a.split("|") if a != "" else []
+    def get_aes_key(self, friend: str):
+        self.send_aes(f"get aes key|{friend}")
+        data = self.receive()
+        if data == "-1":
+            return
+        size_key_1, data = data.split("|", 1)
+        self.keys[friend] = to_bytes(int(data[:int(size_key_1)])) + to_bytes(int(data[int(size_key_1) + 1:]))
 
-    def get_request(self):
-        self.send(encrypt("getrequest|", self.s_key))
-        a = decrypt(self.receive(), self.priv_key)
-        return a.split("|") if a != "" else []
+    @staticmethod
+    def split_usernames(data: str) -> list:
+        usernames = []
+        while len(data) > 0:
+            size_username, data = data.split("|", 1)
+            username, data = data[:int(size_username)], data[int(size_username) + 1:]
+            usernames.append(username)
+
+    def get_requests(self):
+        self.send_aes("get pendings")
+        data = self.receive_aes()
+        # data = "USERNAME_LENGTH|USERNAME|USERNAME_LENGTH|USERNAME|..."
+        self.requests = self.split_usernames(data)
+
+    def get_pendings(self):
+        self.send_aes("get pendings")
+        data = self.receive_aes()
+        # data = "USERNAME_LENGTH|USERNAME|USERNAME_LENGTH|USERNAME|..."
+        self.pendings = self.split_usernames(data)
 
     def friend_request(self, _friend):
         self.send(encrypt("friendrequest|" + _friend, self.s_key))
