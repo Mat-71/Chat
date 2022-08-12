@@ -4,7 +4,6 @@ import time
 
 import aes
 import rsa
-from encryption import *
 import socket
 import sys
 import errno
@@ -30,7 +29,7 @@ class Client:
         self.pendings = {}  # pendings = {"username": key}
         self.is_connected = -1
         self.server_aes_key = None
-        self.last_ping = self.ping()
+        self.last_ping = time.time()
         self.aes_protocol()
         if self.server_aes_key is None:
             return
@@ -40,6 +39,7 @@ class Client:
         self.is_connected = 1
         if new:
             self.load()
+        self.ping_server()
 
     def load(self):
         # load messages, keys, requests, pendings from json file "[self.username].json" in the same directory
@@ -52,7 +52,6 @@ class Client:
                 self.pendings = data["pendings"]
         except FileNotFoundError:
             pass
-
 
     def start_transmission(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -92,10 +91,13 @@ class Client:
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
                     print('Reading error: {}'.format(str(e)))
-                    sys.exit()
+                    sys.exit()  # TODO: handle this
             except Exception as e:
                 print('Reading error: '.format(str(e)))
-                sys.exit()
+                sys.exit()  # TODO: handle this
+
+    def receive_aes(self) -> str:
+        return aes.decrypt(self.receive(), self.server_aes_key)
 
     def send(self, data):
         data = to_bytes(data)
@@ -104,18 +106,17 @@ class Client:
     def send_aes(self, data):
         self.send(aes.encrypt(str(data), self.server_aes_key))
 
-    def ping(self):
+    def ping_server(self):
         self.send("")
-        return time.time()
+        self.last_ping = time.time()
 
     def login(self):
-        user = aes.encrypt('login|' + self.username, self.s_key)
-        self.send(user)
-        check = self.receive()
-        if check == "-1":
-            return -1
-        check = encrypt('check|' + decrypt(check, self.key[1]), self.s_key)
-        self.send(check)
+        self.send(aes.encrypt(f"login|{self.username}", self.server_aes_key))
+        data = int(aes.decrypt(self.receive(), self.server_aes_key))
+        if data == -1:
+            return False
+        check = rsa.crypt(data, self.priv_key)
+        self.send_aes(f"check|{check}")
         if self.receive() == "0":
             return 0
         return 1
@@ -166,10 +167,10 @@ class Client:
 # login() -> 1:mauvais id ou mdp pour ce compte, 0:compte correctement connecté, -1: erreur envoi serveur
 
 if __name__ == "__main__":
-    username = "bob"
+    _username = "bob"
     password = ""
-    _pub_key, _priv_key = get_key_from_password(username + password)
-    client = Client(username, _pub_key, _priv_key, new=True)
+    _pub_key, _priv_key = get_key_from_password(_username + password)
+    client = Client(_username, _pub_key, _priv_key, new=True)
     print(password, len(password))
     print(client.is_connected)
     print(client.get_friend())

@@ -3,16 +3,16 @@ from Message import Message
 
 class User:
     def __init__(self, username: str, pub_key: int, messages: list[dict[str, str | int]] = None,
-                 keys: dict[str, tuple[str, str]] = None, requests: dict[str, str] = None,
-                 pendings: dict[str, str] = None):
+                 keys: dict[str, tuple[int, int]] = None, requests: dict[str, int] = None,
+                 pendings: dict[str, int] = None):
         if messages is None:
             messages = []
         if keys is None:
-            keys: dict[str, tuple[str, str]] = {}
+            keys: dict[str, tuple[int, int]] = {}
         if requests is None:
-            requests: dict[str, str] = {}
+            requests: dict[str, int] = {}
         if pendings is None:
-            pendings: dict[str, str] = {}
+            pendings: dict[str, int] = {}
         self.username = username
         self.pub_key = pub_key
         self.messages = [Message(**message) for message in messages]  # messages = [message, message, message]
@@ -21,10 +21,11 @@ class User:
         self.pendings = pendings  # pendings = {"username": key}
 
     def get_friends(self):
-        return "|".join([f"{len(name)}|{name}" for name in self.keys])
+        return "|".join([f"{len(name)}|{name}|{self.keys[name]}" for name in self.keys])
 
     def get_aes_key(self, username: str) -> str:
-        return "|".join([f"{len(key)}|{key}" for key in self.keys[username]])
+        key_1, key_2 = self.keys[username]
+        return f"{len(str(key_1))}{key_1}|{key_2}"
 
     def get_requests(self):
         return "|".join([f"{len(name)}|{name}" for name in self.requests])
@@ -37,7 +38,7 @@ class User:
             return "|".join([f"{len(str(message))}|{message}" for message in self.messages])
         return "|".join([f"{len(str(message))}|{message}" for message in self.messages[:n]])
 
-    def add_friend(self, friend: str, key: str):
+    def add_friend(self, friend: str, key: int):
         if friend in self.pendings:
             key_part_1 = self.pendings[friend]
             self.pendings.pop(friend)
@@ -48,10 +49,10 @@ class User:
             key_part_1 = key
         self.keys[friend] = (key_part_1, key_part_2)
 
-    def add_request(self, username: str, key: str):
+    def add_request(self, username: str, key: int):
         self.requests[username] = key
 
-    def add_pending(self, username: str, key: str):
+    def add_pending(self, username: str, key: int):
         self.pendings[username] = key
 
     def new_message(self, content: str, username: str) -> str:
@@ -68,5 +69,5 @@ class User:
 
 if __name__ == "__main__":
     _message = Message("redipac", "Hello world!")
-    _user = User("redipac", 12345, [_message.__dict__, _message.__dict__], {"redipac": ("key_part_1", "key_part_2")})
+    _user = User("redipac", 12345, [_message.__dict__, _message.__dict__], {"redipac": (42, 69)})
     print(_user.get_messages())

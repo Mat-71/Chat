@@ -1,0 +1,48 @@
+# examples of communication with the server
+# Alice: A, Bob: B, Server: S
+
+
+# Alice connects to the server
+A: key
+S: PUB_KEY
+A: aes|RAND_NUM|PUB_KEY
+S: RAND_NUM
+
+# from there aes is used to encrypt the message
+
+# Alice signs up
+A: sign up|PUB_KEY|USERNAME
+S: 0
+
+# Alice logs in
+A: login|USERNAME
+S: CHECK
+A: check login|CHECK
+S: 0
+
+# Alice asks Bob's public key
+A: get pub key|USERNAME
+S: PUB_KEY
+
+# Alice asks Bob as friend
+A: friend request|USERNAME_LENGTH|USERNAME|RAND_NUM_USER_LENGTH|RAND_NUM_USER|RAND_NUM_FRIEND
+S: 0
+
+# Alice gets pending requests
+A: get pendings
+S: LEN_USERNAME_1|USERNAME_1|LEN_USERNAME_2|USERNAME_2|LEN_USERNAME_3|USERNAME_3
+
+# Bob gets requests
+B: get requests
+S: LEN_USERNAME_1|USERNAME_1|LEN_USERNAME_2|USERNAME_2|LEN_USERNAME_3|USERNAME_3
+
+# Bob accepts the request
+A: accept friend|USERNAME_LENGTH|USERNAME|RAND_NUM_USER_LENGTH|RAND_NUM_USER|RAND_NUM_FRIEND
+S: 0
+
+# Bob asks Alice's aes key
+B: get aes key|USERNAME
+S: KEY_1_LENGTH|KEY_1|KEY_2_LENGTH|KEY_2
+
+# Alice sends a message to Bob
+A: message|USERNAME_LENGTH|USERNAME|CONTENT

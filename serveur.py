@@ -133,13 +133,13 @@ class Server:
         self.send_success(client, aes_key)
 
     @staticmethod
-    def read_data_friend_requests(data: str):
+    def read_data_friend_requests(data: str) -> tuple[str, int, int]:
         # data = "USERNAME_LENGTH|USERNAME|RAND_NUM_USER_LENGTH|RAND_NUM_USER|RAND_NUM_FRIEND"
         username_length, data = data.split("|", 1)
         friend_name, data = data[:int(username_length)], data[int(username_length) + 1:]
         key_user_length, data = data.split("|", 1)
         key_user, key_friend = data[:int(key_user_length)], data[int(key_user_length) + 1:]
-        return friend_name, key_user, key_friend
+        return friend_name, int(key_user), int(key_friend)
 
     def friend_request(self, aes_key: bytes, client: socket.socket, user: User, data: str):
         friend_name, key_user, key_friend = self.read_data_friend_requests(data)
@@ -185,7 +185,7 @@ class Server:
         match action:
             case 'login':
                 return self.login(client_data, aes_key, client, data)
-            case 'check login':
+            case 'check':
                 return self.check_login(client_data, client, aes_key, int(data))
             case 'sign up':
                 # TODO: check if user password is strong enough
