@@ -14,8 +14,9 @@ sys.setrecursionlimit(15000)
 
 class Client:
     def __init__(self, _username: str, public_key: int, private_key: tuple[int, int], new: bool = False):
-        self.server_address = ("localhost", 42690)
+        self.server_address = ("localhost", 404)
         self.HEADER_LENGTH = 10
+        self.AES_LENGTH = 80
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.connect(self.server_address)
         self.server_socket.setblocking(False)
@@ -29,16 +30,17 @@ class Client:
         self.is_connected = -1
         self.server_aes_key = None
         self.last_ping = time.time()
+        self.last_log = None
+
         self.aes_protocol()
         if self.server_aes_key is None:
             return
         self.is_connected = 0
-        if not self.connexion(new):
+        self.sign_up() if new else self.login()
+        if self.last_log == -1:
             return
         self.is_connected = 1
-        if new:
-            self.load()
-        self.ping_server()
+        self.load()
 
     def load(self):
         # load messages, keys, requests, pending from json file "[self.username].json" in the same directory
@@ -61,19 +63,12 @@ class Client:
         self.server_socket.close()
 
     def aes_protocol(self):
-        self.start_transmission()
         self.send("key")
         s_key = self.receive(int)
-        c_rand_num = rsa.crypt(random_number(80), s_key)
-        self.send(f"aes|{c_rand_num}|{self.public_key}")
-        s_rand_num = rsa.crypt(int(self.receive()), self.private_key)
+        c_rand_num = random_number(self.AES_LENGTH)
+        self.send(f"aes|{rsa.crypt(c_rand_num, s_key)}|{rsa.crypt(self.public_key, s_key)}")
+        s_rand_num = rsa.crypt(self.receive(int), self.private_key)
         self.server_aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num) if s_rand_num != -1 else None
-        self.end_transmission()
-
-    def connexion(self, new: bool) -> bool:
-        if new:
-            return self.sign_up()
-        return self.login()
 
     def header(self, data: bytes) -> bytes:
         message_header = to_bytes(len(data))
@@ -86,6 +81,7 @@ class Client:
                 if not len(message_header):
                     return False
                 message_length = from_bytes(message_header, int)
+                self.last_ping = time.time()
                 return from_bytes(self.server_socket.recv(message_length), target_type)
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
@@ -96,13 +92,16 @@ class Client:
                 sys.exit()  # TODO: handle this
 
     def receive_aes(self) -> str:
-        return aes.decrypt(self.receive(), self.server_aes_key)
+        data = aes.decrypt(self.receive(bytes), self.server_aes_key)
+        print("received:", data)
+        return data
 
     def send(self, data):
         data = to_bytes(data)
         self.server_socket.send(self.header(data) + data)
 
     def send_aes(self, data):
+        print("sent:", str(data))
         self.send(aes.encrypt(str(data), self.server_aes_key))
 
     def ping_server(self):
@@ -110,15 +109,16 @@ class Client:
         self.last_ping = time.time()
 
     def login(self):
-        self.send(aes.encrypt(f"login|{self.username}", self.server_aes_key))
-        data = int(aes.decrypt(self.receive(), self.server_aes_key))
+        self.send_aes(f"login|{self.username}")
+        data = int(self.receive_aes())
         if data == -1:
-            return False
+            self.last_log = -1
+            return
+        print("encrypted check:", data)
+        print("pub key:", self.public_key)
         check = rsa.crypt(data, self.private_key)
         self.send_aes(f"check|{check}")
-        if self.receive() == "0":
-            return True
-        return 1
+        self.last_log = int(self.receive_aes())
 
     def sign_up(self):
         self.send(aes.encrypt(f"sign up|{self.public_key}|{self.username}", self.server_aes_key))
@@ -160,20 +160,26 @@ class Client:
         # data = "USERNAME_LENGTH|USERNAME|USERNAME_LENGTH|USERNAME|..."
         self.pending = self.split_usernames(data)
 
-    def friend(self, friend: str) -> str:  # TODO: modify the name of this function and variables
+    def generate_key_part(self, friend: str) -> str | None:
         friend_key = self.get_public_key(friend)
-        rand_num = random_number(80)
-        a = [friend, rsa.crypt(rand_num, self.public_key),
-             rsa.crypt(rand_num, friend_key)]
-        return "|".join([f"{len(str(name))}|{name}" for name in a])
+        if friend_key == 0:
+            return
+        rand_num = random_number(self.AES_LENGTH)
+        return "|".join([friend, str(rsa.crypt(rand_num, self.public_key)), str(rsa.crypt(rand_num, friend_key))])
 
-    def friend_request(self, friend: str) -> int:
-        self.send_aes(f'friend request|{self.friend(friend)}')
-        return int(self.receive_aes())
+    def request_friend(self, friend: str):
+        key_part = self.generate_key_part(friend)
+        if key_part is None:
+            return
+        self.send_aes(f'request friend|{key_part}')
+        self.last_log = int(self.receive_aes())
 
-    def friend_accept(self, friend: str) -> int:
-        self.send_aes(f'accept friend|{self.friend(friend)}')
-        return int(self.receive_aes())
+    def accept_friend(self, friend: str):
+        key_part = self.generate_key_part(friend)
+        if key_part is None:
+            return
+        self.send_aes(f'accept friend|{key_part}')
+        self.last_log = int(self.receive_aes())
 
     def get_public_key(self, username: str) -> int:
         self.send_aes(f"get pub key|{username}")
@@ -185,8 +191,8 @@ class Client:
         aes_key = self.keys[friend] if friend in self.keys else None  # if is not friend, aes_key is None
         if aes_key is None:
             return -1
-        self.send_aes(f"send message|{self.friend(friend)}|{friend}|{aes.encrypt(message, aes_key)}")
-        return int(self.receive())
+        self.send_aes(f"send message|{len(friend)}|{friend}|{aes.encrypt(message, aes_key)}")
+        self.last_log = int(self.receive())
 
 
 if __name__ == "__main__":

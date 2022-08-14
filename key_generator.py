@@ -3,20 +3,22 @@ import random
 from primality_test import is_prime
 
 
-def random_number(size: int) -> int:
+def random_number(size: int, seeded=False) -> int:
+    if not seeded:
+        random.seed()
     return random.randrange(2 ** (size - 1), 2 ** size - 1)
 
 
 def generate_large_primes_with_password(seed: str, keysize: int) -> (int, int):
     random.seed(seed, 2)
 
-    p = random_number(keysize)
+    p = random_number(keysize, True)
     if p % 2 == 0:
         p += 1
     while not is_prime(p):
         p += 2
 
-    q = random_number(keysize)
+    q = random_number(keysize, True)
     if q % 2 == 0:
         q += 1
     while not is_prime(q) or p == q:

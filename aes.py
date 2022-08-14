@@ -13,8 +13,7 @@ def encrypt(plain_text: str, password: bytes) -> bytes:
     salt = get_random_bytes(AES.block_size)
 
     # use the Scrypt KDF to get a private key from the password
-    private_key = hashlib.scrypt(
-        password, salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+    private_key = hashlib.scrypt(password, salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
 
     # create cipher config
     cipher_config = AES.new(private_key, AES.MODE_GCM)
@@ -33,8 +32,7 @@ def decrypt(encrypted: bytes, password: bytes) -> str:
     tag = encrypted[-16:]
 
     # generate the private key from the password and salt
-    private_key = hashlib.scrypt(
-        password, salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+    private_key = hashlib.scrypt(password, salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
 
     # create the cipher config
     cipher = AES.new(private_key, AES.MODE_GCM, nonce=nonce)
