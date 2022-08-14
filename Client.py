@@ -121,8 +121,8 @@ class Client:
         self.last_log = int(self.receive_aes())
 
     def sign_up(self):
-        self.send(aes.encrypt(f"sign up|{self.public_key}|{self.username}", self.server_aes_key))
-        return self.receive() == "0"
+        self.send_aes(f"sign up|{self.public_key}|{self.username}")
+        self.last_log = int(self.receive_aes())
 
     def get_friends(self):
         self.send_aes("get friend")
@@ -183,7 +183,11 @@ class Client:
 
     def get_public_key(self, username: str) -> int:
         self.send_aes(f"get pub key|{username}")
-        return int(self.receive_aes())
+        data = int(self.receive_aes())
+        if data == -1:
+            self.last_log = -1
+            return 0
+        return data
 
     def send_message(self, friend: str, message: str):
         if friend not in self.keys:

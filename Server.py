@@ -10,7 +10,7 @@ from conversion import to_bytes, from_bytes
 
 
 class Server:
-    def __init__(self, ip: str, port: int, password: str, key_size: int):
+    def __init__(self, ip: str, port: int, password: str, key_size: int = 4096):
         self.IP = ip
         self.PORT = port
         self.HEADER_LENGTH = 10
@@ -97,7 +97,7 @@ class Server:
         s_rand_num = random_number(self.AES_LENGTH)
         aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num)
         self.clients[client] = {"aes_key": aes_key, "auth": False}
-        self.send(rsa.crypt(s_rand_num, rsa.crypt(c_pub_key, self.private_key)), client)
+        self.send(rsa.crypt(s_rand_num, c_pub_key), client)
 
     def login(self, client_data: dict, aes_key: bytes, client: socket.socket, username: str):
         # data = "USERNAME"
@@ -190,6 +190,7 @@ class Server:
         if "username" not in client_data or not client_data["auth"]:
             return self.send_fail(client, aes_key)
         user = self.users[client_data["username"]]
+        print(action)
         match action:
             case 'get friends':
                 return self.send_aes(user.get_friends(), aes_key, client)
@@ -211,7 +212,7 @@ class Server:
                 return self.send_fail(client, aes_key)
 
     def listen_client(self, client: socket.socket, data: str):
-        print("data:", data)
+        print("data", end=' ')
         if not data:
             print("empty")
             return self.sockets_list.remove(client)
@@ -243,7 +244,7 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server("", 444, "5", 12)
+    server = Server("", 404, "5")
     print(f'Listening for connections on {server.IP}: {server.PORT}...')
     while True:
         server.listen()
