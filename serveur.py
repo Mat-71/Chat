@@ -21,12 +21,9 @@ class Server:
         self.sockets_list = [self.server_socket]
         self.users: dict[str, User] = {}
         self.clients = {}
-        """
-        example:
-        self.users = {"username": User(username="username", pub_key=pub_key)}
-        self.clients = {socket: {"username": username, "aes_key": aes_key, "check": check, "pub_key": pub_key, "auth": auth}}
-        """
-        self.pub_key, self.priv_key = get_key_from_password(password, key_size)
+        """example: self.users = {"username": User(username="username", pub_key=pub_key)} self.clients = {socket: {
+        "username": username, "aes_key": aes_key, "check": check, "public_key": public_key, "auth": auth}} """
+        self.public_key, self.private_key = get_key_from_password(password, key_size)
         self.file_number = 0
         self.load()
 
@@ -80,24 +77,24 @@ class Server:
         self.send(aes.encrypt(str(data), aes_key), client)
 
     def send_success(self, client: socket.socket, key: bytes):
-        self.send_aes("0", key, client)
+        self.send_aes(0, key, client)
 
     def send_fail(self, client: socket.socket, key: bytes, error_code: int = -1):
         self.send_aes(error_code, key, client)
 
     def send_public_key(self, client: socket.socket):
-        self.send(self.pub_key, client)
+        self.send(self.public_key, client)
 
     def aes_protocol(self, client: socket.socket, data: str):
         # data = "RAND_NUM|PUB_KEY"
         c_rand_num, c_pub_key = data.split("|", 1)
-        c_rand_num = rsa.crypt(int(c_rand_num), self.priv_key)
+        c_rand_num = rsa.crypt(int(c_rand_num), self.private_key)
         c_pub_key = int(c_pub_key)
         s_rand_num = random_number(80)
         print(c_pub_key, c_rand_num)
         aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num)
         self.clients[client] = {"aes_key": aes_key, "auth": False}
-        self.send(rsa.crypt(s_rand_num, rsa.crypt(c_pub_key, self.priv_key)), client)
+        self.send(rsa.crypt(s_rand_num, rsa.crypt(c_pub_key, self.private_key)), client)
 
     def login(self, client_data: dict, aes_key: bytes, client: socket.socket, username: str):
         # data = "USERNAME"
@@ -202,8 +199,8 @@ class Server:
                 return self.send_aes(user.get_requests(), aes_key, client)
             case 'accept friend':
                 return self.accept_friend(aes_key, client, user, data)
-            case 'get pendings':
-                return self.send_aes(user.get_pendings(), aes_key, client)
+            case 'get pending':
+                return self.send_aes(user.get_pending(), aes_key, client)
             case 'get pub key':
                 return self.get_pub_key(client, aes_key, data)
             case 'get aes key':

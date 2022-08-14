@@ -1,4 +1,3 @@
-import datetime
 import json
 import time
 
@@ -14,19 +13,19 @@ sys.setrecursionlimit(15000)
 
 
 class Client:
-    def __init__(self, _username: str, pub_key: int, priv_key: tuple[int, int], new: bool = False):
+    def __init__(self, _username: str, public_key: int, private_key: tuple[int, int], new: bool = False):
         self.server_address = ("localhost", 42690)
         self.HEADER_LENGTH = 10
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.connect(self.server_address)
         self.server_socket.setblocking(False)
         self.username = _username
-        self.pub_key = pub_key
-        self.priv_key = priv_key
+        self.public_key = public_key
+        self.private_key = private_key
         self.messages = {}  # messages = {friend: [message, message, message]}
         self.keys = {}  # key = {"username": aes_key}
         self.requests = []  # requests = {"username": key}
-        self.pendings = []  # pendings = {"username": key}
+        self.pending = []  # pending = {"username": key}
         self.is_connected = -1
         self.server_aes_key = None
         self.last_ping = time.time()
@@ -42,14 +41,14 @@ class Client:
         self.ping_server()
 
     def load(self):
-        # load messages, keys, requests, pendings from json file "[self.username].json" in the same directory
+        # load messages, keys, requests, pending from json file "[self.username].json" in the same directory
         try:
             with open(self.username + ".json", "r") as f:
                 data = json.load(f)
                 self.messages = data["messages"]
                 self.keys = data["keys"]
                 self.requests = data["requests"]
-                self.pendings = data["pendings"]
+                self.pending = data["pending"]
         except FileNotFoundError:
             pass
 
@@ -66,8 +65,8 @@ class Client:
         self.send("key")
         s_key = self.receive(int)
         c_rand_num = rsa.crypt(random_number(80), s_key)
-        self.send(f"aes|{c_rand_num}|{self.pub_key}")
-        s_rand_num = rsa.crypt(int(self.receive()), self.priv_key)
+        self.send(f"aes|{c_rand_num}|{self.public_key}")
+        s_rand_num = rsa.crypt(int(self.receive()), self.private_key)
         self.server_aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num) if s_rand_num != -1 else None
         self.end_transmission()
 
@@ -115,22 +114,20 @@ class Client:
         data = int(aes.decrypt(self.receive(), self.server_aes_key))
         if data == -1:
             return False
-        check = rsa.crypt(data, self.priv_key)
+        check = rsa.crypt(data, self.private_key)
         self.send_aes(f"check|{check}")
         if self.receive() == "0":
             return True
         return 1
 
     def sign_up(self):
-        self.send(aes.encrypt(f"sign up|{self.pub_key}|{self.username}", self.server_aes_key))
+        self.send(aes.encrypt(f"sign up|{self.public_key}|{self.username}", self.server_aes_key))
         return self.receive() == "0"
 
     def get_friends(self):
         self.send_aes("get friend")
         data = self.receive_aes()
-        while len(data) > 0:
-            size_username, data = data.split("|", 1)
-            username, data = data[:int(size_username)], data[int(size_username) + 1:]
+        for username in self.split_usernames(data):
             if username not in self.keys:
                 self.get_aes_key(username)
 
@@ -149,53 +146,54 @@ class Client:
             size_username, data = data.split("|", 1)
             username, data = data[:int(size_username)], data[int(size_username) + 1:]
             usernames.append(username)
+        return usernames
 
     def get_requests(self):
-        self.send_aes("get pendings")
+        self.send_aes("get requests")
         data = self.receive_aes()
         # data = "USERNAME_LENGTH|USERNAME|USERNAME_LENGTH|USERNAME|..."
         self.requests = self.split_usernames(data)
 
-    def get_pendings(self):
-        self.send_aes("get pendings")
+    def get_pending(self):
+        self.send_aes("get pending")
         data = self.receive_aes()
         # data = "USERNAME_LENGTH|USERNAME|USERNAME_LENGTH|USERNAME|..."
-        self.pendings = self.split_usernames(data)
+        self.pending = self.split_usernames(data)
 
-    def friend_request(self, _friend):
-        self.send(encrypt("friendrequest|" + _friend, self.s_key))
-        return self.receive()
+    def friend(self, friend: str) -> str:  # TODO: modify the name of this function and variables
+        friend_key = self.get_public_key(friend)
+        rand_num = random_number(80)
+        a = [friend, rsa.crypt(rand_num, self.public_key),
+             rsa.crypt(rand_num, friend_key)]
+        return "|".join([f"{len(str(name))}|{name}" for name in a])
 
-    def friend_accept(self, _friend):
-        self.send(encrypt("friendaccept|" + _friend, self.s_key))
-        return self.receive()
+    def friend_request(self, friend: str) -> int:
+        self.send_aes(f'friend request|{self.friend(friend)}')
+        return int(self.receive_aes())
 
-    def send_message(self, _friend, _message):
-        self.send(encrypt("message|" + _friend + "|" + encrypt(_message, self.get_friend_key(_friend)), self.s_key))
-        a = self.receive()
-        if a == "-1":
+    def friend_accept(self, friend: str) -> int:
+        self.send_aes(f'accept friend|{self.friend(friend)}')
+        return int(self.receive_aes())
+
+    def get_public_key(self, username: str) -> int:
+        self.send_aes(f"get pub key|{username}")
+        return int(self.receive_aes())
+
+    def send_message(self, friend: str, message: str):
+        if friend not in self.keys:
+            self.get_aes_key(friend)
+        aes_key = self.keys[friend] if friend in self.keys else None  # if is not friend, aes_key is None
+        if aes_key is None:
             return -1
-        if a == "1":
-            return 1
-        return datetime.datetime.strptime(a, '%Y-%m-%d %H:%M:%S')
+        self.send_aes(f"send message|{self.friend(friend)}|{friend}|{aes.encrypt(message, aes_key)}")
+        return int(self.receive())
 
-    def get_friend_key(self, _friend):
-        self.send(encrypt("getfriendkey|" + _friend, self.s_key))
-        a = decrypt(self.receive(), self.priv_key).split("|")
-        return int(a[0]), int(a[1])
-
-
-# sign_up() -> 1:username déjà pris , 0:compte correctement créé, -1: erreur envoi serveur
-# login() -> 1:mauvais id ou mdp pour ce compte, 0:compte correctement connecté, -1: erreur envoi serveur
 
 if __name__ == "__main__":
     _username = "bob"
     password = ""
-    _pub_key, _priv_key = get_key_from_password(_username + password)
-    client = Client(_username, _pub_key, _priv_key, new=True)
+    _public_key, _private_key = get_key_from_password(_username + password)
+    client = Client(_username, _public_key, _private_key, new=True)
     print(password, len(password))
     print(client.is_connected)
-    print(client.get_friend())
-    print(client.get_pending())
-    print(client.get_request())
     print(client.send_message("admin", "salut"))
