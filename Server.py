@@ -220,6 +220,7 @@ class Server:
         if data == 'key':  # send key to client
             return self.send_public_key(client)
         if data.startswith("aes"):  # server send aes key to client
+            print("received aes key:", data)
             return self.aes_protocol(client, data.removeprefix("aes").removeprefix('|'))
         if client in self.clients:  # connection is secure
             self.aes_data_receive(client, data)
