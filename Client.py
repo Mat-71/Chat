@@ -7,12 +7,14 @@ import sys
 import errno
 from key_generator import get_key_from_password, random_number
 from conversion import to_bytes, from_bytes
+
+
 # TODO: timeout for socket
 
 
 class Client:
     def __init__(self, _username: str, public_key: int, private_key: tuple[int, int], new: bool = False):
-        self.server_address = ("localhost", 404)
+        self.server_address = ("176.154.76.192", 404)
         self.HEADER_LENGTH = 10
         self.AES_LENGTH = 80
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -74,15 +76,18 @@ class Client:
         return b'\x00' * (self.HEADER_LENGTH - len(message_header)) + message_header
 
     def receive(self, target_type: type = str):
+        message_header = None
+        message = b''
+        message_length = 0
         while True:
             try:
-                message_header = self.server_socket.recv(self.HEADER_LENGTH)
-                if not len(message_header):
-                    return False
-                message_length = from_bytes(message_header, int)
-                message = b''
+                if message_header is None:
+                    message_header = self.server_socket.recv(self.HEADER_LENGTH)
+                    if not len(message_header):
+                        return False
+                    message_length = from_bytes(message_header, int)
                 while message_length > 0:
-                    new_part = self.server_socket.recv(message_length)
+                    new_part = self.server_socket.recv(min(message_length, 512))
                     message_length -= len(new_part)
                     message += new_part
                 self.last_ping = time.time()
@@ -138,11 +143,14 @@ class Client:
     def get_aes_key(self, friend: str):
         self.send_aes(f"get aes key|{friend}")
         data = self.receive_aes()
+        print(data)
         if data == "-1":
             return
         key_1, key_2 = data.split("|", 1)
         key_1 = rsa.crypt(int(key_1), self.private_key)
         key_2 = rsa.crypt(int(key_2), self.private_key)
+        print("key_1:", key_1)
+        print("key_2:", key_2)
         self.keys[friend] = to_bytes(key_1) + to_bytes(key_2)
 
     @staticmethod
