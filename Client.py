@@ -14,8 +14,8 @@ from conversion import to_bytes, from_bytes
 
 class Client:
     def __init__(self, _username: str, public_key: int, private_key: tuple[int, int], new: bool = False):
-        # self.server_address = ("176.154.76.192", 404)
-        self.server_address = ("localhost", 404)
+        self.server_address = ("176.154.76.192", 404)
+        # self.server_address = ("localhost", 404)
         self.HEADER_LENGTH = 10
         self.AES_LENGTH = 80
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -76,26 +76,29 @@ class Client:
         return b'\x00' * (self.HEADER_LENGTH - len(message_header)) + message_header
 
     def receive(self, target_type: type = str):
+        message_header = None
+        message = b''
+        message_length = 0
         while True:
             try:
-                message_header = self.server_socket.recv(self.HEADER_LENGTH)
-                if not len(message_header):
-                    return False
-                message_length = from_bytes(message_header, int)
-                message = b''
+                if message_header is None:
+                    message_header = self.server_socket.recv(self.HEADER_LENGTH)
+                    if not len(message_header):
+                        return False
+                    message_length = from_bytes(message_header, int)
                 while message_length > 0:
-                    new_part = self.server_socket.recv(message_length)
+                    new_part = self.server_socket.recv(min(message_length, 512))
                     message_length -= len(new_part)
                     message += new_part
                 self.last_ping = time.time()
                 return from_bytes(message, target_type)
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
-                    print(f"Reading error: {str(e)}")
-                    return
+                    print('Reading error: {}'.format(str(e)))
+                    sys.exit()  # TODO: handle this
             except Exception as e:
-                print(f"Reading error: {str(e)}")
-                return
+                print('Reading error: '.format(str(e)))
+                sys.exit()  # TODO: handle this
 
     def receive_aes(self) -> str:
         data = aes.decrypt(self.receive(bytes), self.server_aes_key)
