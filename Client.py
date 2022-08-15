@@ -38,7 +38,7 @@ class Client:
             return
         self.is_connected = 0
         self.sign_up() if new else self.login()
-        if self.last_log == -1:
+        if self.last_log != 0:
             return
         self.is_connected = 1
         self.load()
@@ -77,18 +77,15 @@ class Client:
         return b'\x00' * (self.HEADER_LENGTH - len(message_header)) + message_header
 
     def receive(self, target_type: type = str):
-        message_header = None
-        message = b''
-        message_length = 0
         while True:
             try:
-                if message_header is None:
-                    message_header = self.server_socket.recv(self.HEADER_LENGTH)
-                    if not len(message_header):
-                        return False
-                    message_length = from_bytes(message_header, int)
+                message_header = self.server_socket.recv(self.HEADER_LENGTH)
+                if not len(message_header):
+                    return False
+                message_length = from_bytes(message_header, int)
+                message = b''
                 while message_length > 0:
-                    new_part = self.server_socket.recv(min(message_length, 512))
+                    new_part = self.server_socket.recv(message_length)
                     message_length -= len(new_part)
                     message += new_part
                 self.last_ping = time.time()
@@ -144,14 +141,11 @@ class Client:
     def get_aes_key(self, friend: str):
         self.send_aes(f"get aes key|{friend}")
         data = self.receive_aes()
-        print(data)
         if data == "-1":
             return
         key_1, key_2 = data.split("|", 1)
         key_1 = rsa.crypt(int(key_1), self.private_key)
         key_2 = rsa.crypt(int(key_2), self.private_key)
-        print("key_1:", key_1)
-        print("key_2:", key_2)
         self.keys[friend] = to_bytes(key_1) + to_bytes(key_2)
 
     @staticmethod
@@ -203,6 +197,19 @@ class Client:
             self.last_log = -1
             return 0
         return data
+
+    def insert_message(self, friend: str, new_message: dict):
+        if friend not in self.messages:
+            self.messages[friend] = []
+        messages = self.messages[friend]
+        for message in messages:
+            if message["sent_time"] == new_message["sent_time"]:
+                return
+        messages.append(new_message)
+        i = len(messages) - 2
+        while i >= 0 and messages[i]["sent_time"] > new_message["sent_time"]:
+            messages[i + 1] = messages[i]
+            i -= 1
 
     def send_message(self, friend: str, message: str):
         if friend not in self.keys:
