@@ -95,6 +95,7 @@ class Server:
     def aes_protocol(self, client: socket.socket, data: str):
         # data = "RAND_NUM|PUB_KEY"
         print("received:", data)
+        print(data.count("|"))
         c_rand_num, c_pub_key = data.split("|", 1)
         c_rand_num = rsa.crypt(int(c_rand_num), self.private_key)
         c_pub_key = rsa.crypt(int(c_pub_key), self.private_key)

@@ -64,6 +64,7 @@ class Client:
         self.send("key")
         s_key = self.receive(int)
         c_rand_num = random_number(self.AES_LENGTH)
+        print(rsa.crypt(c_rand_num, s_key))
         self.send(f"aes|{rsa.crypt(c_rand_num, s_key)}|{rsa.crypt(self.public_key, s_key)}")
         s_rand_num = rsa.crypt(self.receive(int), self.private_key)
         self.server_aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num) if s_rand_num != -1 else None
