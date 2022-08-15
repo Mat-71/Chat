@@ -12,7 +12,7 @@ from conversion import to_bytes, from_bytes
 
 class Client:
     def __init__(self, _username: str, public_key: int, private_key: tuple[int, int], new: bool = False):
-        self.server_address = ("172.105.11.28", 404)
+        self.server_address = ("localhost", 404)
         self.HEADER_LENGTH = 10
         self.AES_LENGTH = 80
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -80,8 +80,13 @@ class Client:
                 if not len(message_header):
                     return False
                 message_length = from_bytes(message_header, int)
+                message = b''
+                while message_length > 0:
+                    new_part = self.server_socket.recv(message_length)
+                    message_length -= len(new_part)
+                    message += new_part
                 self.last_ping = time.time()
-                return from_bytes(self.server_socket.recv(message_length), target_type)
+                return from_bytes(message, target_type)
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
                     print('Reading error: {}'.format(str(e)))
