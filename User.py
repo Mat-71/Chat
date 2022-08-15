@@ -21,7 +21,7 @@ class User:
         self.pending = pending  # pending = {"username": key}
 
     def get_friends(self):
-        return "|".join([f"{len(name)}|{name}|{self.keys[name]}" for name in self.keys])
+        return "|".join([f"{len(name)}|{name}" for name in self.keys])
 
     def get_aes_key(self, username: str) -> str:
         key_1, key_2 = self.keys[username]
@@ -44,9 +44,9 @@ class User:
             self.pending.pop(friend)
             key_part_2 = key
         else:
-            key_part_2 = self.requests[friend]
+            key_part_1 = self.requests[friend]
             self.requests.pop(friend)
-            key_part_1 = key
+            key_part_2 = key
         self.keys[friend] = (key_part_1, key_part_2)
 
     def add_request(self, username: str, key: int):

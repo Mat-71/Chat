@@ -131,7 +131,7 @@ class Client:
 
     def get_aes_key(self, friend: str):
         self.send_aes(f"get aes key|{friend}")
-        data = self.receive()
+        data = self.receive_aes()
         if data == "-1":
             return
         key_1, key_2 = data.split("|", 1)

@@ -55,14 +55,3 @@ def from_bytes(data: bytes, target_type: type) -> bytes | str | int | float:
             return bytes_to_float(data)
         case _:
             raise Exception(f"Unable to convert 'bytes' to '{target_type.__name__}'")
-
-
-if __name__ == "__main__":
-    print(to_bytes(5))
-    print(from_bytes(to_bytes(5), int))
-
-    print(to_bytes(b"5"))
-    print(from_bytes(to_bytes(b"5"), bytes))
-
-    print(to_bytes("5"))
-    print(from_bytes(to_bytes("5"), str))

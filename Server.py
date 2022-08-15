@@ -9,6 +9,8 @@ from User import User
 from conversion import to_bytes, from_bytes
 
 
+# TODO: timeout for socket
+
 class Server:
     def __init__(self, ip: str, port: int, password: str, key_size: int = 4096):
         self.IP = ip
@@ -56,7 +58,7 @@ class Server:
         file_name = f"user{str(self.file_number)}.json"
         self.file_number = (self.file_number + 1) % 3
         with open(file_name, 'w') as outfile:
-            outfile.write(json.dumps([int(time.time() * 1000), [u.__dict__ for u in self.users.values()]], indent=2))
+            outfile.write(json.dumps([int(time.time() * 1000), [u.__dict__() for u in self.users.values()]], indent=2))
 
     def receive(self, client: socket.socket, target_type: type = str):
         try:
@@ -188,7 +190,6 @@ class Server:
         if "username" not in client_data or not client_data["auth"]:
             return self.send_fail(client, aes_key)
         user = self.users[client_data["username"]]
-        print(action)
         match action:
             case 'get friends':
                 return self.send_aes(user.get_friends(), aes_key, client)
