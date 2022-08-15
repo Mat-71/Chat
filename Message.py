@@ -9,10 +9,17 @@ class Message:
         self.sent_time = sent_time
 
     def __str__(self):
-        return f'{len(self.username)}|{self.sent_time}|{self.username}|{self.content}'
+        return f'{self.sent_time}|{len(self.username)}|{self.username}|{self.content}'
 
     def __repr__(self):
         return str(self.__dict__)
+
+    def __dict__(self):
+        return {
+            "username": self.username,
+            "content": self.content,
+            "sent_time": self.sent_time
+        }
 
     def user_print(self) -> str:
         return f"{self.username} [{self.date_str()}]: {self.content}"

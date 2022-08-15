@@ -1,6 +1,5 @@
 import json
 import time
-
 import aes
 import rsa
 import socket
@@ -8,8 +7,7 @@ import sys
 import errno
 from key_generator import get_key_from_password, random_number
 from conversion import to_bytes, from_bytes
-
-sys.setrecursionlimit(15000)
+# TODO: timeout for socket
 
 
 class Client:
@@ -125,9 +123,9 @@ class Client:
         self.last_log = int(self.receive_aes())
 
     def get_friends(self):
-        self.send_aes("get friend")
+        self.send_aes("get friends")
         data = self.receive_aes()
-        for username in self.split_usernames(data):
+        for username in self.split_data(data):
             if username not in self.keys:
                 self.get_aes_key(username)
 
@@ -136,29 +134,31 @@ class Client:
         data = self.receive()
         if data == "-1":
             return
-        size_key_1, data = data.split("|", 1)
-        self.keys[friend] = to_bytes(int(data[:int(size_key_1)])) + to_bytes(int(data[int(size_key_1) + 1:]))
+        key_1, key_2 = data.split("|", 1)
+        key_1 = rsa.crypt(int(key_1), self.private_key)
+        key_2 = rsa.crypt(int(key_2), self.private_key)
+        self.keys[friend] = to_bytes(key_1) + to_bytes(key_2)
 
     @staticmethod
-    def split_usernames(data: str) -> list:
-        usernames = []
+    def split_data(data: str) -> list[str]:
+        splits = []
         while len(data) > 0:
-            size_username, data = data.split("|", 1)
-            username, data = data[:int(size_username)], data[int(size_username) + 1:]
-            usernames.append(username)
-        return usernames
+            size_split, data = data.split("|", 1)
+            split_data, data = data[:int(size_split)], data[int(size_split) + 1:]
+            splits.append(split_data)
+        return splits
 
     def get_requests(self):
         self.send_aes("get requests")
         data = self.receive_aes()
         # data = "USERNAME_LENGTH|USERNAME|USERNAME_LENGTH|USERNAME|..."
-        self.requests = self.split_usernames(data)
+        self.requests = self.split_data(data)
 
     def get_pending(self):
         self.send_aes("get pending")
         data = self.receive_aes()
         # data = "USERNAME_LENGTH|USERNAME|USERNAME_LENGTH|USERNAME|..."
-        self.pending = self.split_usernames(data)
+        self.pending = self.split_data(data)
 
     def generate_key_part(self, friend: str) -> str | None:
         friend_key = self.get_public_key(friend)
@@ -195,8 +195,32 @@ class Client:
         aes_key = self.keys[friend] if friend in self.keys else None  # if is not friend, aes_key is None
         if aes_key is None:
             return -1
-        self.send_aes(f"send message|{len(friend)}|{friend}|{aes.encrypt(message, aes_key)}")
-        self.last_log = int(self.receive())
+        print("aes key:", aes_key)
+        self.send_aes(f"send message|{len(friend)}|{friend}|{from_bytes(aes.encrypt(message, aes_key), str)}")
+        data = int(self.receive_aes())
+        if data < 0:
+            self.last_log = data
+            return
+        dict_message = {"sent_time": data, "content": message, "sender": self.username}
+        print(dict_message)
+        # TODO: insert messages to messages dict
+
+    def get_messages(self):
+        self.send_aes("get messages")
+        data = self.receive_aes()
+        messages = self.split_data(data)
+        for message in messages:
+            sent_time, size_username, message = message.split("|", 2)
+            username, content = message[:int(size_username)], message[int(size_username) + 1:]
+            if username not in self.keys:
+                self.get_aes_key(username)
+            sent_time = int(sent_time)
+            print("content:", content)
+            print("aes key:", self.keys[username])
+            content = aes.decrypt(to_bytes(content), self.keys[username])
+            dict_message = {"sent_time": sent_time, "content": content, "sender": username}
+            print(dict_message)
+            # self.messages[username].append(dict_message)  TODO: insert messages to messages dict
 
 
 if __name__ == "__main__":

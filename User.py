@@ -25,7 +25,7 @@ class User:
 
     def get_aes_key(self, username: str) -> str:
         key_1, key_2 = self.keys[username]
-        return f"{len(str(key_1))}{key_1}|{key_2}"
+        return f"{key_1}|{key_2}"
 
     def get_requests(self):
         return "|".join([f"{len(name)}|{name}" for name in self.requests])
@@ -66,8 +66,12 @@ class User:
                 self.messages.remove(message)
                 return
 
-
-if __name__ == "__main__":
-    _message = Message("bob", "Hello world!")
-    _user = User("bob", 12345, [_message.__dict__, _message.__dict__], {"bob": (42, 69)})
-    print(_user.get_messages())
+    def __dict__(self):
+        return {
+            "username": self.username,
+            "pub_key": self.pub_key,
+            "messages": [message.__dict__() for message in self.messages],
+            "keys": self.keys,
+            "requests": self.requests,
+            "pending": self.pending
+        }
