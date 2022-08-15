@@ -14,7 +14,8 @@ from conversion import to_bytes, from_bytes
 
 class Client:
     def __init__(self, _username: str, public_key: int, private_key: tuple[int, int], new: bool = False):
-        self.server_address = ("176.154.76.192", 404)
+        # self.server_address = ("176.154.76.192", 404)
+        self.server_address = ("localhost", 404)
         self.HEADER_LENGTH = 10
         self.AES_LENGTH = 80
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
