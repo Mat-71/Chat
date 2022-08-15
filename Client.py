@@ -67,7 +67,6 @@ class Client:
         self.send("key")
         s_key = self.receive(int)
         c_rand_num = random_number(self.AES_LENGTH)
-        print(rsa.crypt(c_rand_num, s_key))
         self.send(f"aes|{rsa.crypt(c_rand_num, s_key)}|{rsa.crypt(self.public_key, s_key)}")
         s_rand_num = rsa.crypt(self.receive(int), self.private_key)
         self.server_aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num) if s_rand_num != -1 else None
@@ -92,11 +91,11 @@ class Client:
                 return from_bytes(message, target_type)
             except IOError as e:
                 if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
-                    print('Reading error: {}'.format(str(e)))
-                    sys.exit()  # TODO: handle this
+                    print(f"Reading error: {str(e)}")
+                    return
             except Exception as e:
-                print('Reading error: '.format(str(e)))
-                sys.exit()  # TODO: handle this
+                print(f"Reading error: {str(e)}")
+                return
 
     def receive_aes(self) -> str:
         data = aes.decrypt(self.receive(bytes), self.server_aes_key)
@@ -137,6 +136,8 @@ class Client:
         for username in self.split_data(data):
             if username not in self.keys:
                 self.get_aes_key(username)
+                if username not in self.messages:
+                    self.messages[username] = []
 
     def get_aes_key(self, friend: str):
         self.send_aes(f"get aes key|{friend}")
@@ -199,6 +200,7 @@ class Client:
         return data
 
     def insert_message(self, friend: str, new_message: dict):
+        print("insert message:", new_message)
         if friend not in self.messages:
             self.messages[friend] = []
         messages = self.messages[friend]
