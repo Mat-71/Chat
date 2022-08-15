@@ -213,7 +213,7 @@ class Client:
         messages.append(new_message)
         i = len(messages) - 2
         while i >= 0 and messages[i]["sent_time"] > new_message["sent_time"]:
-            messages[i + 1] = messages[i]
+            messages[i], messages[i+1] = messages[i+1], messages[i]
             i -= 1
 
     def send_message(self, friend: str, message: str):
