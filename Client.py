@@ -217,15 +217,13 @@ class Client:
         aes_key = self.keys[friend] if friend in self.keys else None  # if is not friend, aes_key is None
         if aes_key is None:
             return -1
-        print("aes key:", aes_key)
         self.send_aes(f"send message|{len(friend)}|{friend}|{from_bytes(aes.encrypt(message, aes_key), str)}")
         data = int(self.receive_aes())
         if data < 0:
             self.last_log = data
             return
         dict_message = {"sent_time": data, "content": message, "sender": self.username}
-        print(dict_message)
-        # TODO: insert messages to messages dict
+        self.insert_message(friend, dict_message)
 
     def get_messages(self):
         self.send_aes("get messages")
@@ -237,12 +235,9 @@ class Client:
             if username not in self.keys:
                 self.get_aes_key(username)
             sent_time = int(sent_time)
-            print("content:", content)
-            print("aes key:", self.keys[username])
             content = aes.decrypt(to_bytes(content), self.keys[username])
             dict_message = {"sent_time": sent_time, "content": content, "sender": username}
-            print(dict_message)
-            # self.messages[username].append(dict_message)  TODO: insert messages to messages dict
+            self.insert_message(username, dict_message)
 
 
 if __name__ == "__main__":
