@@ -14,7 +14,7 @@ from conversion import to_bytes, from_bytes
 
 class Server:
     def __init__(self, ip: str, port: int, password: str, key_size: int = 4096):
-        self.IP = ip
+        self.IP: str = ip
         self.PORT = port
         self.HEADER_LENGTH = 10
         self.AES_LENGTH = 80
@@ -248,7 +248,7 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server("", 404, "5")
+    server = Server("", 4040, "5")
     print(f'Listening for connections on {server.IP}: {server.PORT}...')
     while True:
         server.listen()
