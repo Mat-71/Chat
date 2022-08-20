@@ -112,11 +112,7 @@ class Interface:
 
     def switch_frame(self, frame_name, *args):
         if self.current_frame is not None:
-            if isinstance(self.current_frame, tk.Frame):
-                self.current_frame.pack_forget()
-            else:
-                for child in self.current_frame:
-                    child.pack_forget()
+            self.current_frame.pack_forget()
         frame = None
         match frame_name:  # additional conditions and actions
             case "menu":
@@ -126,13 +122,8 @@ class Interface:
                 self.client.get_messages()
         if frame is None:
             frame = self.frames[frame_name](*args)
-        if isinstance(frame, tk.Frame):
-            frame.pack(expand=1, fill=tk.BOTH)
-            self.current_frame = frame
-        else:
-            for i in frame:
-                i.pack(expand=1, fill=tk.BOTH)
         self.current_frame = frame
+        frame.pack(expand=1, fill=tk.BOTH)
 
     def connect_to_server(self, username: str, password: str, new=False):
         public, private = get_key_from_password(username + password)
@@ -171,9 +162,9 @@ class Interface:
 
     def message_print(self, message: dict, sent_by_user: bool = False) -> str:
         sender, sent_time, content = message["sender"], message["sent_time"], message["content"]
-        if direction:
-            return f"{content} : {self.date_str(sent_time)}"
-        return f"{sender} [{self.date_str(sent_time)}]: {content}"
+        if sent_by_user:
+            return f"{content} : [{self.date_str(sent_time)}]\n "
+        return f"{sender} [{self.date_str(sent_time)}]: {content}\n"
 
 
 if __name__ == "__main__":
