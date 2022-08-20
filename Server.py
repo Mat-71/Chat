@@ -238,10 +238,12 @@ class Server:
     def listen(self):
         read_sockets, _, exception_sockets = select.select(self.sockets_list, [], self.sockets_list)
         for notified_socket in read_sockets:
+            a = time.time()
             if notified_socket == self.server_socket:
                 self.sockets_list.append(self.server_socket.accept()[0])
             else:
                 self.listen_client(notified_socket, self.receive(notified_socket))
+            print(f"operated in {time.time()-a} seconds")
         for notified_socket in exception_sockets:
             self.sockets_list.remove(notified_socket)
             print("Socket {} is offline".format(notified_socket))
