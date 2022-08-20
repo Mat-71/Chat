@@ -36,13 +36,12 @@ class Interface:
         self.client.get_pending()
         self.client.get_requests()
         frame = tk.Frame(self.window)
+        log_out_button = tk.Button(frame, text="Log out", command=self.log_out)
+        log_out_button.pack()
         tabs = ttk.Notebook(frame)
-        # make log out button in the left
-        # "Chats" tab
 
+        # "Chats" tab
         chats_tab = ttk.Frame(tabs)
-        log_out_button = tk.Button(chats_tab, text="Log out", command=self.log_out)
-        log_out_button.grid(row=0, column=0, sticky=tk.W, pady=2)
         friends = list(self.client.keys.keys())
         print("friends:", friends)
         for i in range(len(friends)):
@@ -50,6 +49,7 @@ class Interface:
             button = tk.Button(chats_tab, text=friend, command=lambda: self.switch_frame("chat", friend))
             button.grid(row=i, column=1, sticky=tk.W, pady=2)
         tabs.add(chats_tab, text="Chats")
+
         # "Add friend" tab
         pending_tabs = ttk.Frame(tabs)
         i = 0
@@ -62,6 +62,7 @@ class Interface:
         add_button = tk.Button(pending_tabs, text="Add", command=lambda: self.send_request(new_friend.get()))
         add_button.grid(row=1, column=1, sticky=tk.W, pady=2)
         tabs.add(pending_tabs, text="Add friend")
+
         # "See requests" tab
         requests_tab = ttk.Frame(tabs)
         i = 0
@@ -70,28 +71,43 @@ class Interface:
             button.grid(row=i, column=0, sticky=tk.W, pady=2)
             i += 1
         tabs.add(requests_tab, text="See requests")
+
         tabs.pack(expand=1, fill=tk.BOTH)
         return frame
 
     def chat_frame(self, friend: str = None):
         frame = tk.Frame(self.window)
-        menu = tk.Frame(frame)
-        back_button = tk.Button(menu, text="Back", command=lambda: self.switch_frame("menu"))
-        back_button.pack(expand=1)
-        chat = tk.Frame(frame)
+        menu_frame = tk.Frame(frame)
+        back_button = tk.Button(menu_frame, text="Back", command=lambda: self.switch_frame("menu"))
+        back_button.grid(row=0, column=0, sticky=tk.W, pady=2)
+        back_button.pack()
+        menu_frame.pack(anchor=tk.NW)
+        chat_input = tk.Frame(frame)
+        scrollbar = tk.Scrollbar(chat_input, orient=tk.VERTICAL)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         i = 1
-        for message in self.client.messages[friend]:
-            if message["sender"] == friend:
-                tk.Label(chat, text=self.message_print(message)).grid(row=i, column=0, sticky=tk.W, pady=2)
+        text = tk.Text(chat_input, wrap=tk.WORD, yscrollcommand=scrollbar.set)
+        text.tag_config("user_tag", justify=tk.RIGHT, foreground="#6e92aa")
+        text.tag_config("friend_tag", justify=tk.LEFT)
+        for message_input in self.client.messages[friend]:
+            if message_input["sender"] == self.client.username:
+                text.insert(tk.INSERT, self.message_print(message_input, True))
+                text.tag_add("user_tag", f"{i}.0", f"{i}.end")
             else:
-                tk.Label(chat, text=self.message_print(message, True), fg="blue").grid(row=i, column=1, sticky=tk.W,
-                                                                                        pady=2)
+                text.insert(tk.INSERT, self.message_print(message_input))
+                text.tag_add("friend_tag", f"{i}.0", f"{i}.end")
             i += 1
-        message = tk.Entry(chat)
-        message.grid(row=i, sticky=tk.W, column=0, pady=2, columnspan=3)
-        send_button = tk.Button(chat, text="Send", command=lambda: self.send(message, friend))
-        send_button.grid(row=i, column=3, sticky=tk.W, pady=2)
-        chat.pack(expand=1, fill=tk.BOTH)
+        text.yview(tk.END)
+        text.config(state=tk.DISABLED, wrap=tk.WORD)
+        text.pack()
+        chat_input.pack(anchor=tk.CENTER)
+        input_frame = tk.Frame(frame)
+        message_input = tk.Entry(input_frame)
+        message_input.focus()
+        message_input.grid(row=1, sticky=tk.W, column=0, pady=2, columnspan=3)
+        send_button = tk.Button(input_frame, text="Send", command=lambda: self.send(message_input, friend))
+        send_button.grid(row=1, column=3, sticky=tk.W, pady=2)
+        input_frame.pack(anchor=tk.S)
         return frame
 
     def switch_frame(self, frame_name, *args):
@@ -153,7 +169,7 @@ class Interface:
             return date.strftime("%a. %d %b., %H:%M")
         return date.strftime("%H:%M")
 
-    def message_print(self, message: dict, direction: bool = False) -> str:
+    def message_print(self, message: dict, sent_by_user: bool = False) -> str:
         sender, sent_time, content = message["sender"], message["sent_time"], message["content"]
         if direction:
             return f"{content} : {self.date_str(sent_time)}"
