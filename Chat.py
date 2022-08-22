@@ -2,6 +2,7 @@ import datetime
 import tkinter as tk
 from tkinter import ttk
 from Client import Client
+from ScrollableFrame import ScrollableFrame
 from key_generator import get_key_from_password
 
 
@@ -77,30 +78,25 @@ class Interface:
 
     def chat_frame(self, friend: str = None):
         frame = tk.Frame(self.window)
+
         menu_frame = tk.Frame(frame)
         back_button = tk.Button(menu_frame, text="Back", command=lambda: self.switch_frame("menu"))
         back_button.grid(row=0, column=0, sticky=tk.W, pady=2)
         back_button.pack()
-        menu_frame.pack(anchor=tk.NW)
-        chat_input = tk.Frame(frame)
-        scrollbar = tk.Scrollbar(chat_input, orient=tk.VERTICAL)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        i = 1
-        text = tk.Text(chat_input, wrap=tk.WORD, yscrollcommand=scrollbar.set)
-        text.tag_config("user_tag", justify=tk.RIGHT, foreground="#6e92aa")
-        text.tag_config("friend_tag", justify=tk.LEFT)
-        for message_input in self.client.messages[friend]:
-            if message_input["sender"] == self.client.username:
-                text.insert(tk.INSERT, self.message_print(message_input, True))
-                text.tag_add("user_tag", f"{i}.0", f"{i}.end")
-            else:
-                text.insert(tk.INSERT, self.message_print(message_input))
-                text.tag_add("friend_tag", f"{i}.0", f"{i}.end")
-            i += 1
-        text.yview(tk.END)
-        text.config(state=tk.DISABLED, wrap=tk.WORD)
-        text.pack()
-        chat_input.pack(anchor=tk.CENTER)
+        menu_frame.place(relx=0, rely=0, relwidth=0.1)
+
+        messages_frame = ScrollableFrame(frame, border=5, relief=tk.SUNKEN)
+        messages_frame.place(relx=0.1, rely=0, relwidth=0.9, relheight=0.9)
+
+        for message in self.client.messages[friend]:
+            text = tk.Text(messages_frame.content, height=1, width=20)
+            text.insert(tk.END, Interface.format_message(message))
+            text.pack(anchor=tk.W if message["sender"] == friend else tk.E)
+            text.config(state=tk.DISABLED)
+            lines = len(text.get("1.0", "end").split("\n"))
+            text.config(height=lines - 1)
+        messages_frame.scroll_canvas()
+
         input_frame = tk.Frame(frame)
         message_input = tk.Entry(input_frame)
         message_input.focus()
@@ -136,7 +132,7 @@ class Interface:
         self.client = None
         self.switch_frame("connexion")
 
-    def send(self, message, friend: str):
+    def send_message(self, message: tk.Entry, friend: str):
         print(message.get())
         self.client.send_message(friend, message.get())
         message.delete(0, tk.END)
@@ -152,7 +148,7 @@ class Interface:
 
     @staticmethod
     def date_str(sent_time: int) -> str:
-        date = datetime.datetime.fromtimestamp(sent_time / 1000)
+        date = datetime.datetime.fromtimestamp(sent_time // 1000)
         today = datetime.datetime.today()
         if date.year != today.year:
             return date.strftime("%a. %d %b. %Y, %H:%M")
@@ -160,11 +156,15 @@ class Interface:
             return date.strftime("%a. %d %b., %H:%M")
         return date.strftime("%H:%M")
 
-    def message_print(self, message: dict, sent_by_user: bool = False) -> str:
+    @staticmethod
+    def format_message(message: dict, sent_by_user: bool = False) -> str:
         sender, sent_time, content = message["sender"], message["sent_time"], message["content"]
+        """
         if sent_by_user:
-            return f"{content} : [{self.date_str(sent_time)}]\n "
-        return f"{sender} [{self.date_str(sent_time)}]: {content}\n"
+            return f"{content} : [{Interface.date_str(sent_time)}]"
+        return f"{sender} [{Interface.date_str(sent_time)}]: {content}"
+        """
+        return content
 
 
 if __name__ == "__main__":
