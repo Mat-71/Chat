@@ -81,7 +81,6 @@ class Interface:
 
         menu_frame = tk.Frame(frame)
         back_button = tk.Button(menu_frame, text="Back", command=lambda: self.switch_frame("menu"))
-        back_button.grid(row=0, column=0, sticky=tk.W, pady=2)
         back_button.pack()
         menu_frame.place(relx=0, rely=0, relwidth=0.1)
 
@@ -100,10 +99,10 @@ class Interface:
         input_frame = tk.Frame(frame)
         message_input = tk.Entry(input_frame)
         message_input.focus()
-        message_input.grid(row=1, sticky=tk.W, column=0, pady=2, columnspan=3)
-        send_button = tk.Button(input_frame, text="Send", command=lambda: self.send(message_input, friend))
-        send_button.grid(row=1, column=3, sticky=tk.W, pady=2)
-        input_frame.pack(anchor=tk.S)
+        message_input.pack(fill=tk.X, side=tk.LEFT, expand=True)
+        send_button = tk.Button(input_frame, text="Send", command=lambda: self.send_message(message_input, friend))
+        send_button.pack(fill=tk.X, side=tk.RIGHT)
+        input_frame.place(relx=0.1, rely=0.9, relwidth=0.9, relheight=0.1)
         return frame
 
     def switch_frame(self, frame_name, *args):
