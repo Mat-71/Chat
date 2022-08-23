@@ -8,12 +8,12 @@ from Cryptodome.Random import get_random_bytes
 from conversion import from_bytes, to_bytes
 
 
-def encrypt(plain_text: str, password: bytes) -> bytes:
+def encrypt(plain_text: str, password: int) -> bytes:
     # generate a random salt
     salt = get_random_bytes(AES.block_size)
 
     # use the Scrypt KDF to get a private key from the password
-    private_key = hashlib.scrypt(password, salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+    private_key = hashlib.scrypt(to_bytes(password), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
 
     # create cipher config
     cipher_config = AES.new(private_key, AES.MODE_GCM)
@@ -24,7 +24,7 @@ def encrypt(plain_text: str, password: bytes) -> bytes:
     return encrypted
 
 
-def decrypt(encrypted: bytes, password: bytes) -> str:
+def decrypt(encrypted: bytes, password: int) -> str:
     # get info from encrypted bytes
     cipher_text = encrypted[:-48]
     salt = encrypted[-48:-32]
@@ -32,7 +32,7 @@ def decrypt(encrypted: bytes, password: bytes) -> str:
     tag = encrypted[-16:]
 
     # generate the private key from the password and salt
-    private_key = hashlib.scrypt(password, salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+    private_key = hashlib.scrypt(to_bytes(password), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
 
     # create the cipher config
     cipher = AES.new(private_key, AES.MODE_GCM, nonce=nonce)
@@ -44,8 +44,9 @@ def decrypt(encrypted: bytes, password: bytes) -> str:
 
 
 if __name__ == "__main__":
-    aes_key_s = b'\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab'
-    aes_key_bob = b'\xab\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab'
+
+    aes_key_s = from_bytes(b'\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab', int)
+    aes_key_bob = from_bytes(b'\xab\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab\xba\xab', int)
     username = "bob"
     content = "Hello Bob"
 

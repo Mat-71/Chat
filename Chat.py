@@ -135,6 +135,7 @@ class Interface:
         print(message.get())
         self.client.send_message(friend, message.get())
         message.delete(0, tk.END)
+        self.client.save()
         self.switch_frame("chat", friend)
 
     def send_request(self, friend: str):
@@ -156,7 +157,7 @@ class Interface:
         return date.strftime("%H:%M")
 
     @staticmethod
-    def format_message(message: dict, sent_by_user: bool = False) -> str:
+    def format_message(message: dict) -> str:
         sender, sent_time, content = message["sender"], message["sent_time"], message["content"]
         """
         if sent_by_user:

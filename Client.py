@@ -1,12 +1,14 @@
+import errno
 import json
-import time
-import aes
-import rsa
+import os
 import socket
 import sys
-import errno
-from key_generator import get_key_from_password, random_number
+import time
+
+import aes
+import rsa
 from conversion import to_bytes, from_bytes
+from key_generator import get_key_from_password, random_number
 
 
 # TODO: timeout for socket
@@ -25,9 +27,9 @@ class Client:
         self.public_key = public_key
         self.private_key = private_key
         self.messages = {}  # messages = {friend: [message, message, message]}
-        self.keys = {}  # key = {"username": aes_key}
-        self.requests = []  # requests = {"username": key}
-        self.pending = []  # pending = {"username": key}
+        self.keys: dict[str, int] = {}  # key = {"username": aes_key}
+        self.requests = []  # requests = [username, username, username]
+        self.pending = []  # pending = [username, username, username]
         self.is_connected = -1
         self.server_aes_key = None
         self.last_ping = time.time()
@@ -41,19 +43,31 @@ class Client:
         if self.last_log != 0:
             return
         self.is_connected = 1
-        self.load()
+        if os.path.exists(self.username + ".json"):
+            self.load()
+
+    def __dict__(self):
+        return {
+            "username": self.username,
+            "messages": self.messages,
+            "keys": self.keys,
+            "requests": self.requests,
+            "pending": self.pending
+        }
 
     def load(self):
         # load messages, keys, requests, pending from json file "[self.username].json" in the same directory
-        try:
-            with open(self.username + ".json", "r") as f:
-                data = json.load(f)
-                self.messages = data["messages"]
-                self.keys = data["keys"]
-                self.requests = data["requests"]
-                self.pending = data["pending"]
-        except FileNotFoundError:
-            pass
+        with open(self.username + ".json", "r") as f:
+            data = json.load(f)
+            self.messages = data["messages"]
+            self.keys = data["keys"]
+            self.requests = data["requests"]
+            self.pending = data["pending"]
+
+    def save(self):
+        # save messages, keys, requests, pending to json file "[self.username].json" in the same directory
+        with open(self.username + ".json", "w") as f:
+            json.dump(self.__dict__(), f)
 
     def start_transmission(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -123,8 +137,6 @@ class Client:
         if data == -1:
             self.last_log = -1
             return
-        print("encrypted check:", data)
-        print("pub key:", self.public_key)
         check = rsa.crypt(data, self.private_key)
         self.send_aes(f"check|{check}")
         self.last_log = int(self.receive_aes())
@@ -150,7 +162,7 @@ class Client:
         key_1, key_2 = data.split("|", 1)
         key_1 = rsa.crypt(int(key_1), self.private_key)
         key_2 = rsa.crypt(int(key_2), self.private_key)
-        self.keys[friend] = to_bytes(key_1) + to_bytes(key_2)
+        self.keys[friend] = from_bytes(to_bytes(key_1) + to_bytes(key_2), int)
 
     @staticmethod
     def split_data(data: str) -> list[str]:
@@ -203,7 +215,7 @@ class Client:
         return data
 
     def insert_message(self, friend: str, new_message: dict):
-        print("insert message:", new_message)
+        # slow method
         if friend not in self.messages:
             self.messages[friend] = []
         messages = self.messages[friend]
@@ -213,7 +225,7 @@ class Client:
         messages.append(new_message)
         i = len(messages) - 2
         while i >= 0 and messages[i]["sent_time"] > new_message["sent_time"]:
-            messages[i], messages[i+1] = messages[i+1], messages[i]
+            messages[i], messages[i + 1] = messages[i + 1], messages[i]
             i -= 1
 
     def send_message(self, friend: str, message: str):
@@ -246,10 +258,35 @@ class Client:
 
 
 if __name__ == "__main__":
-    _username = "bob"
-    password = ""
-    _public_key, _private_key = get_key_from_password(_username + password)
-    client = Client(_username, _public_key, _private_key, new=True)
-    print(password, len(password))
-    print(client.is_connected)
-    print(client.send_message("admin", "salut"))
+    if os.path.exists("Alice.json"):
+        os.remove("Alice.json")
+        print("Alice.json removed")
+        sys.exit(0)
+    message1 = {"sender": "Alice", "sent_time": 1, "content": "Hello"}
+    message2 = {"sender": "Bob", "sent_time": 2, "content": "Hi"}
+    message3 = {"sender": "Alice", "sent_time": 3, "content": "How are you?"}
+    message4 = {"sender": "Bob", "sent_time": 4, "content": "Fine"}
+    message5 = {"sender": "Alice", "sent_time": 5, "content": "What's up?"}
+    message6 = {"sender": "Bob", "sent_time": 6, "content": "Nothing"}
+    message7 = {"sender": "Alice", "sent_time": 7, "content": "Bye"}
+    message8 = {"sender": "Bob", "sent_time": 8, "content": "See you"}
+
+    keys = get_key_from_password("Alicecanada")
+    Alice = Client("Alice", *keys, False)
+    Alice.get_friends()
+    Alice.get_pending()
+    Alice.get_requests()
+    Alice.get_messages()
+    """Alice.keys["Bob"] = from_bytes(b"\xab" * 16, int)
+    Alice.messages["Bob"] = [message1, message2, message3, message4, message5, message6, message7, message8]
+    Alice.requests = ["Charles, Denis"]
+    Alice.pending = ["Eve", "Frank"]"""
+
+    Alice.save()
+
+    Alice_copy = Client("Alice", *keys, False)
+    Alice_copy.load()
+    print(Alice_copy.messages)
+    print(Alice_copy.keys)
+    print(Alice_copy.requests)
+    print(Alice_copy.pending)
