@@ -255,7 +255,7 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server("", 4040, "5")
+    server = Server("", 4040, "YouWontHaveIt")
     print(f'Listening for connections on {server.IP}: {server.PORT}...')
     while True:
         server.listen()
