@@ -5,14 +5,18 @@ import socket
 import sys
 import time
 
-import aes
-import rsa
-from conversion import to_bytes, from_bytes
-from key_generator import get_key_from_password, random_number
+from Conversion import Conversion
+from Rsa import Rsa
+from KeyGenerator import KeyGenerator
+from Aes import Aes
+
+to_bytes, from_bytes = Conversion.to_bytes, Conversion.from_bytes
+crypt = Rsa.crypt
+get_key_from_password, random_number = KeyGenerator.get_key_from_password, KeyGenerator.random_number
+encrypt, decrypt = Aes.encrypt, Aes.decrypt
 
 
 # TODO: timeout for socket
-
 
 class Client:
     def __init__(self, _username: str, public_key: int, private_key: tuple[int, int], new: bool = False):
@@ -81,8 +85,8 @@ class Client:
         self.send("key")
         s_key = self.receive(int)
         c_rand_num = random_number(self.AES_LENGTH)
-        self.send(f"aes|{rsa.crypt(c_rand_num, s_key)}|{rsa.crypt(self.public_key, s_key)}")
-        s_rand_num = rsa.crypt(self.receive(int), self.private_key)
+        self.send(f"aes|{crypt(c_rand_num, s_key)}|{crypt(self.public_key, s_key)}")
+        s_rand_num = crypt(self.receive(int), self.private_key)
         self.server_aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num) if s_rand_num != -1 else None
 
     def header(self, data: bytes) -> bytes:
@@ -115,7 +119,7 @@ class Client:
                 sys.exit()  # TODO: handle this
 
     def receive_aes(self) -> str:
-        data = aes.decrypt(self.receive(bytes), self.server_aes_key)
+        data = decrypt(self.receive(bytes), self.server_aes_key)
         print("received:", data)
         return data
 
@@ -125,7 +129,7 @@ class Client:
 
     def send_aes(self, data):
         print("sent:", str(data))
-        self.send(aes.encrypt(str(data), self.server_aes_key))
+        self.send(encrypt(str(data), self.server_aes_key))
 
     def ping_server(self):
         self.send("")
@@ -137,7 +141,7 @@ class Client:
         if data == -1:
             self.last_log = -1
             return
-        check = rsa.crypt(data, self.private_key)
+        check = crypt(data, self.private_key)
         self.send_aes(f"check|{check}")
         self.last_log = int(self.receive_aes())
 
@@ -160,8 +164,8 @@ class Client:
         if data == "-1":
             return
         key_1, key_2 = data.split("|", 1)
-        key_1 = rsa.crypt(int(key_1), self.private_key)
-        key_2 = rsa.crypt(int(key_2), self.private_key)
+        key_1 = crypt(int(key_1), self.private_key)
+        key_2 = crypt(int(key_2), self.private_key)
         self.keys[friend] = from_bytes(to_bytes(key_1) + to_bytes(key_2), int)
 
     @staticmethod
@@ -190,7 +194,7 @@ class Client:
         if friend_key == 0:
             return
         rand_num = random_number(self.AES_LENGTH)
-        return "|".join([friend, str(rsa.crypt(rand_num, self.public_key)), str(rsa.crypt(rand_num, friend_key))])
+        return "|".join([friend, str(crypt(rand_num, self.public_key)), str(crypt(rand_num, friend_key))])
 
     def request_friend(self, friend: str):
         key_part = self.generate_key_part(friend)
@@ -234,7 +238,7 @@ class Client:
         aes_key = self.keys[friend] if friend in self.keys else None  # if is not friend, aes_key is None
         if aes_key is None:
             return -1
-        self.send_aes(f"send message|{len(friend)}|{friend}|{from_bytes(aes.encrypt(message, aes_key), str)}")
+        self.send_aes(f"send message|{len(friend)}|{friend}|{from_bytes(encrypt(message, aes_key), str)}")
         data = int(self.receive_aes())
         if data < 0:
             self.last_log = data
@@ -252,7 +256,7 @@ class Client:
             if username not in self.keys:
                 self.get_aes_key(username)
             sent_time = int(sent_time)
-            content = aes.decrypt(to_bytes(content), self.keys[username])
+            content = decrypt(to_bytes(content), self.keys[username])
             dict_message = {"sent_time": sent_time, "content": content, "sender": username}
             self.insert_message(username, dict_message)
 
@@ -271,7 +275,7 @@ if __name__ == "__main__":
     message7 = {"sender": "Alice", "sent_time": 7, "content": "Bye"}
     message8 = {"sender": "Bob", "sent_time": 8, "content": "See you"}
 
-    keys = get_key_from_password("Alicecanada")
+    keys = get_key_from_password("Alice", "canada")
     Alice = Client("Alice", *keys, False)
     Alice.get_friends()
     Alice.get_pending()

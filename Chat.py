@@ -3,7 +3,9 @@ import tkinter as tk
 from tkinter import ttk
 from Client import Client
 from ScrollableFrame import ScrollableFrame
-from key_generator import get_key_from_password
+from KeyGenerator import KeyGenerator
+
+get_key_from_password = KeyGenerator.get_key_from_password
 
 
 class Interface:
@@ -121,7 +123,7 @@ class Interface:
         frame.pack(expand=1, fill=tk.BOTH)
 
     def connect_to_server(self, username: str, password: str, new=False):
-        public, private = get_key_from_password(username + password)
+        public, private = get_key_from_password(username, password)
         self.client = Client(username, public, private, new)
         if self.client.is_connected != 1:
             return
