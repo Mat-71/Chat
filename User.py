@@ -15,13 +15,21 @@ class User:
             pending: dict[str, int] = {}
         self.username = username
         self.pub_key = pub_key
-        self.messages = [Message(**message) for message in messages]  # messages = [message, message, message]
-        self.keys = keys  # key = {"username": (key_part_1, key_part_2)}
-        self.requests = requests  # requests = {"username": key}
-        self.pending = pending  # pending = {"username": key}
+        self.messages = [Message(**message) for message in messages]
+        # messages = [message, message, message]
+        self.keys = dict[str, tuple[int, int]]() if keys is None else keys
+        # key = {"username": (key_part_1, key_part_2)}
+        self.requests = dict[str, int]() if requests is None else requests
+        # requests = {"username": key}
+        self.pending = dict[str, int]() if pending is None else pending
+        # pending = {"username": key}
 
-    def get_friends(self):
-        return "|".join([f"{len(name)}|{name}" for name in self.keys])
+    @staticmethod
+    def get_str_names(dict_names: dict[str]) -> str:
+        return "|".join([f"{len(name)}|{name}" for name in dict_names.keys()])
+
+    def get_friends(self) -> str:
+        return User.get_str_names(self.keys)
 
     def get_aes_key(self, username: str) -> str:
         key_1, key_2 = self.keys[username]
@@ -34,9 +42,8 @@ class User:
         return "|".join([f"{len(name)}|{name}" for name in self.pending])
 
     def get_messages(self, n: int = 0) -> str:
-        if n == 0:
-            return "|".join([f"{len(str(message))}|{message}" for message in self.messages])
-        return "|".join([f"{len(str(message))}|{message}" for message in self.messages[:n]])
+        messages = self.messages[:n] if n else self.messages
+        return "|".join([f"{len(str(message))}|{message}" for message in messages])
 
     def add_friend(self, friend: str, key: int):
         if friend in self.pending:

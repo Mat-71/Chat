@@ -4,7 +4,6 @@ from tkinter import ttk
 from Client import Client
 
 from ScrollableFrame import ScrollableFrame
-from KeyGenerator import get_key_from_password
 
 
 class Interface:
@@ -122,8 +121,7 @@ class Interface:
         frame.pack(expand=1, fill=BOTH)
 
     def connect_to_server(self, username: str, password: str, new=False):
-        public, private = get_key_from_password(username, password)
-        self.client = Client(username, public, private, new)
+        self.client = Client(username, password, new)
         if self.client.is_connected != 1:
             return
         self.switch_frame("menu")

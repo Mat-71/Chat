@@ -32,18 +32,18 @@ class Server:
         self.load()
 
     def load(self):
-        users = None
-        for user in range(3):
+        data = None
+        for i in range(3):
             try:
-                with open(f"user{user}.json") as jsonFile:
+                with open(f"user{i}.json") as jsonFile:
                     users_2 = load(jsonFile)
                     jsonFile.close()
                 if users is None:
                     users = users_2
                 else:
-                    if users[0] < users_2[0]:
-                        users = users_2
-                        self.file_number = (user + 1) % 3
+                    if data[0] < users_2[0]:
+                        data = users_2
+                        self.file_number = (i + 1) % 3
             except IOError:
                 pass
         self.users = {}
@@ -193,7 +193,6 @@ class Server:
             case 'check':
                 return self.check_login(client_data, client, aes_key, int(data))
             case 'sign up':
-                # TODO: check if user password is strong enough (shhhhhhhh!!!!)
                 return self.sign_up(client_data, aes_key, client, data)
         if "username" not in client_data or not client_data["auth"]:
             return self.send_fail(client, aes_key)

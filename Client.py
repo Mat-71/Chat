@@ -14,7 +14,7 @@ from Aes import encrypt, decrypt
 # TODO: timeout for socket
 
 class Client:
-    def __init__(self, _username: str, public_key: int, private_key: tuple[int, int], new: bool = False):
+    def __init__(self, _username: str, password: str, new: bool = False):
         self.server_address = ("176.154.76.192", 4040)
         self.server_address = ("localhost", 4040)
         self.HEADER_LENGTH = 10
@@ -23,8 +23,7 @@ class Client:
         self.server_socket.connect(self.server_address)
         self.server_socket.setblocking(False)
         self.username = _username
-        self.public_key = public_key
-        self.private_key = private_key
+        self.public_key, self.private_key = get_key_from_password(_username, password)
         self.messages = {}  # messages = {friend: [message, message, message]}
         self.keys: dict[str, int] = {}  # key = {"username": aes_key}
         self.requests = []  # requests = [username, username, username]
@@ -269,8 +268,7 @@ if __name__ == "__main__":
     message7 = {"sender": "Alice", "sent_time": 7, "content": "Bye"}
     message8 = {"sender": "Bob", "sent_time": 8, "content": "See you"}
 
-    keys = get_key_from_password("Alice", "canada")
-    Alice = Client("Alice", *keys, False)
+    Alice = Client("Alice", "canada", False)
     Alice.get_friends()
     Alice.get_pending()
     Alice.get_requests()
@@ -282,7 +280,7 @@ if __name__ == "__main__":
 
     Alice.save()
 
-    Alice_copy = Client("Alice", *keys, False)
+    Alice_copy = Client("Alice", "canada", False)
     Alice_copy.load()
     print(Alice_copy.messages)
     print(Alice_copy.keys)

@@ -9,13 +9,15 @@ from Conversion import from_bytes, to_bytes
 
 scrypt = hashlib.scrypt
 
+def get_private_key(password: int, salt: bytes) -> bytes:
+    return scrypt(to_bytes(password), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
 
 def encrypt(plain_text: str, password: int) -> bytes:
     # generate a random salt
     salt = get_random_bytes(AES.block_size)
 
     # use the Scrypt KDF to get a private key from the password
-    private_key = scrypt(to_bytes(password), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+    private_key = get_private_key(password, salt)
 
     # create cipher config
     cipher_config = AES.new(private_key, AES.MODE_GCM)
@@ -34,10 +36,10 @@ def decrypt(encrypted: bytes, password: int) -> str:
     tag = encrypted[-16:]
 
     # generate the private key from the password and salt
-    private_key = scrypt(to_bytes(password), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+    private_key = get_private_key(password, salt)
 
     # create the cipher config
-    cipher = AES.new(private_key, AES.MODE_GCM, nonce=nonce)
+    cipher = AES.new(private_key, AES.MODE_GCM, nonce)
 
     # decrypt the cipher text
     decrypted = cipher.decrypt_and_verify(cipher_text, tag)
