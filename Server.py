@@ -1,17 +1,13 @@
-import json
-import socket
-import time
-import select
-from Conversion import Conversion
-from Rsa import Rsa
-from KeyGenerator import KeyGenerator
-from Aes import Aes
-from User import User
+from json import load, dumps
+from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
+from time import time
+from select import select
 
-to_bytes, from_bytes = Conversion.to_bytes, Conversion.from_bytes
-crypt = Rsa.crypt
-get_key_from_password, random_number = KeyGenerator.get_key_from_password, KeyGenerator.random_number
-encrypt, decrypt = Aes.encrypt, Aes.decrypt
+from Conversion import to_bytes, from_bytes
+from Rsa import rsa_crypt
+from KeyGenerator import get_key_from_password, random_number
+from Aes import encrypt, decrypt
+from User import User
 
 
 # TODO: timeout for socket
@@ -104,12 +100,12 @@ class Server:
         # data = "RAND_NUM|PUB_KEY"
         print("received:", data)
         c_rand_num, c_pub_key = data.split("|", 1)
-        c_rand_num = crypt(int(c_rand_num), self.private_key)
-        c_pub_key = crypt(int(c_pub_key), self.private_key)
+        c_rand_num = rsa_crypt(int(c_rand_num), self.private_key)
+        c_pub_key = rsa_crypt(int(c_pub_key), self.private_key)
         s_rand_num = random_number(self.AES_LENGTH)
         aes_key = from_bytes(to_bytes(c_rand_num) + to_bytes(s_rand_num), int)
         self.clients[client] = {"aes_key": aes_key, "auth": False}
-        self.send(crypt(s_rand_num, c_pub_key), client)
+        self.send(rsa_crypt(s_rand_num, c_pub_key), client)
 
     def login(self, client_data: dict, aes_key: int, client: socket.socket, username: str):
         # data = "USERNAME"
@@ -120,7 +116,7 @@ class Server:
         client_data['username'] = username
         client_data["auth"] = False
         key = self.users[username].pub_key
-        self.send_aes(crypt(_check, key), aes_key, client)
+        self.send_aes(rsa_crypt(_check, key), aes_key, client)
 
     def check_login(self, client_data: dict, client: socket.socket, aes_key: int, check: int):
         # data = "CHECK"

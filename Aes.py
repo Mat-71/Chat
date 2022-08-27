@@ -5,47 +5,44 @@ import hashlib
 from Cryptodome.Cipher import AES
 from Cryptodome.Random import get_random_bytes
 
-from Conversion import Conversion
+from Conversion import from_bytes, to_bytes
 
-from_bytes = Conversion.from_bytes
-to_bytes = Conversion.to_bytes
+scrypt = hashlib.scrypt
 
 
-class Aes:
-    @staticmethod
-    def encrypt(plain_text: str, password: int) -> bytes:
-        # generate a random salt
-        salt = get_random_bytes(AES.block_size)
+def encrypt(plain_text: str, password: int) -> bytes:
+    # generate a random salt
+    salt = get_random_bytes(AES.block_size)
 
-        # use the Scrypt KDF to get a private key from the password
-        private_key = hashlib.scrypt(to_bytes(password), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+    # use the Scrypt KDF to get a private key from the password
+    private_key = scrypt(to_bytes(password), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
 
-        # create cipher config
-        cipher_config = AES.new(private_key, AES.MODE_GCM)
+    # create cipher config
+    cipher_config = AES.new(private_key, AES.MODE_GCM)
 
-        # return bytes of cipher text + salt + nonce + tag
-        cipher_text, tag = cipher_config.encrypt_and_digest(bytes(plain_text, 'utf-8'))
-        encrypted = cipher_text + salt + cipher_config.nonce + tag
-        return encrypted
+    # return bytes of cipher text + salt + nonce + tag
+    cipher_text, tag = cipher_config.encrypt_and_digest(bytes(plain_text, 'utf-8'))
+    encrypted = cipher_text + salt + cipher_config.nonce + tag
+    return encrypted
 
-    @staticmethod
-    def decrypt(encrypted: bytes, password: int) -> str:
-        # get info from encrypted bytes
-        cipher_text = encrypted[:-48]
-        salt = encrypted[-48:-32]
-        nonce = encrypted[-32:-16]
-        tag = encrypted[-16:]
 
-        # generate the private key from the password and salt
-        private_key = hashlib.scrypt(to_bytes(password), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+def decrypt(encrypted: bytes, password: int) -> str:
+    # get info from encrypted bytes
+    cipher_text = encrypted[:-48]
+    salt = encrypted[-48:-32]
+    nonce = encrypted[-32:-16]
+    tag = encrypted[-16:]
 
-        # create the cipher config
-        cipher = AES.new(private_key, AES.MODE_GCM, nonce=nonce)
+    # generate the private key from the password and salt
+    private_key = scrypt(to_bytes(password), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
 
-        # decrypt the cipher text
-        decrypted = cipher.decrypt_and_verify(cipher_text, tag)
+    # create the cipher config
+    cipher = AES.new(private_key, AES.MODE_GCM, nonce=nonce)
 
-        return bytes.decode(decrypted)
+    # decrypt the cipher text
+    decrypted = cipher.decrypt_and_verify(cipher_text, tag)
+
+    return bytes.decode(decrypted)
 
 
 if __name__ == "__main__":
@@ -54,15 +51,15 @@ if __name__ == "__main__":
     username = "bob"
     content = "Hello Bob"
 
-    bytes_encrypted = Aes.encrypt(content, aes_key_bob)
+    bytes_encrypted = encrypt(content, aes_key_bob)
     str_encrypted = from_bytes(bytes_encrypted, str)
     print(f"Encrypted (bytes): {bytes_encrypted}")
     print(f"Encrypted (str): {str_encrypted}")
     print()
     message = f"message|{len(username)}|{username}|{str_encrypted}"
-    encrypted_message = Aes.encrypt(message, aes_key_s)
+    encrypted_message = encrypt(message, aes_key_s)
 
-    serveur_message = Aes.decrypt(encrypted_message, aes_key_s)
+    serveur_message = decrypt(encrypted_message, aes_key_s)
     action, username_length, data = serveur_message.split("|", 2)
     username = data[:int(username_length)]
     content = data[int(username_length) + 1:]
@@ -73,5 +70,5 @@ if __name__ == "__main__":
 
     bytes_encrypted = to_bytes(content)
     print(f"bytes_encrypted: {bytes_encrypted}")
-    str_decrypted = Aes.decrypt(bytes_encrypted, aes_key_bob)
+    str_decrypted = decrypt(bytes_encrypted, aes_key_bob)
     print(f"decrypted: {str_decrypted}")

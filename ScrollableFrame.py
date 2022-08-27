@@ -1,17 +1,17 @@
 # Credits to https://python.tutorialink.com/scrollable-frame-class-in-tkinter/
 
-import tkinter as tk
+from tkinter import *
 
 
-class ScrollableFrame(tk.Frame):
+class ScrollableFrame(Frame):
     def __init__(self, parent, *args, **kwargs):
-        tk.Frame.__init__(self, parent, *args, **kwargs)
-        self.canvas = tk.Canvas(self)
+        Frame.__init__(self, parent, *args, **kwargs)
+        self.canvas = Canvas(self)
         self.canvas.pack(fill="both", expand=True, side="left")
-        self.scroll = tk.Scrollbar(self, command=self.canvas.yview)
+        self.scroll = Scrollbar(self, command=self.canvas.yview)
         self.scroll.pack(side="right", fill="y")
         self.canvas.config(yscrollcommand=self.scroll.set)
-        self.content = tk.Frame(self.canvas)
+        self.content = Frame(self.canvas)
         self.contentWindow = self.canvas.create_window((0, 0), window=self.content, anchor="nw")
         self.content.bind("<Enter>", lambda event: self.enable_scroll_canvas())
         self.content.bind("<Leave>", lambda event: self.disable_scroll_canvas())
@@ -35,11 +35,11 @@ class ScrollableFrame(tk.Frame):
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    root = Tk()
     exampleFrame = ScrollableFrame(root, border=1, relief="sunken")
     exampleFrame.place(x=0, y=0, relheight=1, relwidth=1)
     for i in range(100):
-        text = tk.Text(exampleFrame.content, height=1, width=20)
-        text.insert(tk.END, "item " + str(i))
-        text.pack(anchor=tk.W if i % 2 == 0 else tk.E)
+        text = Text(exampleFrame.content, height=1, width=20)
+        text.insert(END, "item " + str(i))
+        text.pack(anchor=W if i % 2 == 0 else E)
     root.mainloop()

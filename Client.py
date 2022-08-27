@@ -1,19 +1,14 @@
-import errno
-import json
-import os
-import socket
+from errno import EAGAIN, EWOULDBLOCK
+from json import load, dump
+from os import path, remove
+from socket import SOCK_STREAM, socket, AF_INET
 import sys
-import time
+from time import time
 
-from Conversion import Conversion
-from Rsa import Rsa
-from KeyGenerator import KeyGenerator
-from Aes import Aes
-
-to_bytes, from_bytes = Conversion.to_bytes, Conversion.from_bytes
-crypt = Rsa.crypt
-get_key_from_password, random_number = KeyGenerator.get_key_from_password, KeyGenerator.random_number
-encrypt, decrypt = Aes.encrypt, Aes.decrypt
+from Conversion import to_bytes as conv_to_bytes, from_bytes as conv_from_bytes
+from Rsa import rsa_crypt as rsa_crypt
+from KeyGenerator import get_key_from_password, random_number
+from Aes import encrypt, decrypt
 
 
 # TODO: timeout for socket
@@ -24,7 +19,7 @@ class Client:
         self.server_address = ("localhost", 4040)
         self.HEADER_LENGTH = 10
         self.AES_LENGTH = 80
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket = socket(AF_INET, SOCK_STREAM)
         self.server_socket.connect(self.server_address)
         self.server_socket.setblocking(False)
         self.username = _username
@@ -36,7 +31,7 @@ class Client:
         self.pending = []  # pending = [username, username, username]
         self.is_connected = -1
         self.server_aes_key = None
-        self.last_ping = time.time()
+        self.last_ping = time()
         self.last_log = None
 
         self.aes_protocol()
@@ -47,7 +42,7 @@ class Client:
         if self.last_log != 0:
             return
         self.is_connected = 1
-        if os.path.exists(self.username + ".json"):
+        if path.exists(self.username + ".json"):
             self.load()
 
     def __dict__(self):
@@ -62,7 +57,7 @@ class Client:
     def load(self):
         # load messages, keys, requests, pending from json file "[self.username].json" in the same directory
         with open(self.username + ".json", "r") as f:
-            data = json.load(f)
+            data = load(f)
             self.messages = data["messages"]
             self.keys = data["keys"]
             self.requests = data["requests"]
@@ -71,10 +66,10 @@ class Client:
     def save(self):
         # save messages, keys, requests, pending to json file "[self.username].json" in the same directory
         with open(self.username + ".json", "w") as f:
-            json.dump(self.__dict__(), f)
+            dump(self.__dict__(), f)
 
     def start_transmission(self):
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket = socket(AF_INET, SOCK_STREAM)
         self.server_socket.connect(self.server_address)
         self.server_socket.setblocking(False)
 
@@ -85,12 +80,12 @@ class Client:
         self.send("key")
         s_key = self.receive(int)
         c_rand_num = random_number(self.AES_LENGTH)
-        self.send(f"aes|{crypt(c_rand_num, s_key)}|{crypt(self.public_key, s_key)}")
-        s_rand_num = crypt(self.receive(int), self.private_key)
-        self.server_aes_key = to_bytes(c_rand_num) + to_bytes(s_rand_num) if s_rand_num != -1 else None
+        self.send(f"aes|{rsa_crypt(c_rand_num, s_key)}|{rsa_crypt(self.public_key, s_key)}")
+        s_rand_num = rsa_crypt(self.receive(int), self.private_key)
+        self.server_aes_key = conv_to_bytes(c_rand_num) + conv_to_bytes(s_rand_num) if s_rand_num != -1 else None
 
     def header(self, data: bytes) -> bytes:
-        message_header = to_bytes(len(data))
+        message_header = conv_to_bytes(len(data))
         return b'\x00' * (self.HEADER_LENGTH - len(message_header)) + message_header
 
     def receive(self, target_type: type = str):
@@ -103,15 +98,15 @@ class Client:
                     message_header = self.server_socket.recv(self.HEADER_LENGTH)
                     if not len(message_header):
                         return False
-                    message_length = from_bytes(message_header, int)
+                    message_length = conv_from_bytes(message_header, int)
                 while message_length > 0:
                     new_part = self.server_socket.recv(min(message_length, 512))
                     message_length -= len(new_part)
                     message += new_part
-                self.last_ping = time.time()
-                return from_bytes(message, target_type)
+                self.last_ping = time()
+                return conv_from_bytes(message, target_type)
             except IOError as e:
-                if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+                if e.errno != EAGAIN and e.errno != EWOULDBLOCK:
                     print('Reading error: {}'.format(str(e)))
                     sys.exit()  # TODO: handle this
             except Exception as e:
@@ -124,7 +119,7 @@ class Client:
         return data
 
     def send(self, data):
-        data = to_bytes(data)
+        data = conv_to_bytes(data)
         self.server_socket.send(self.header(data) + data)
 
     def send_aes(self, data):
@@ -133,7 +128,7 @@ class Client:
 
     def ping_server(self):
         self.send("")
-        self.last_ping = time.time()
+        self.last_ping = time()
 
     def login(self):
         self.send_aes(f"login|{self.username}")
@@ -141,7 +136,7 @@ class Client:
         if data == -1:
             self.last_log = -1
             return
-        check = crypt(data, self.private_key)
+        check = rsa_crypt(data, self.private_key)
         self.send_aes(f"check|{check}")
         self.last_log = int(self.receive_aes())
 
@@ -164,9 +159,9 @@ class Client:
         if data == "-1":
             return
         key_1, key_2 = data.split("|", 1)
-        key_1 = crypt(int(key_1), self.private_key)
-        key_2 = crypt(int(key_2), self.private_key)
-        self.keys[friend] = from_bytes(to_bytes(key_1) + to_bytes(key_2), int)
+        key_1 = rsa_crypt(int(key_1), self.private_key)
+        key_2 = rsa_crypt(int(key_2), self.private_key)
+        self.keys[friend] = conv_from_bytes(conv_to_bytes(key_1) + conv_to_bytes(key_2), int)
 
     @staticmethod
     def split_data(data: str) -> list[str]:
@@ -194,7 +189,7 @@ class Client:
         if friend_key == 0:
             return
         rand_num = random_number(self.AES_LENGTH)
-        return "|".join([friend, str(crypt(rand_num, self.public_key)), str(crypt(rand_num, friend_key))])
+        return "|".join([friend, str(rsa_crypt(rand_num, self.public_key)), str(rsa_crypt(rand_num, friend_key))])
 
     def request_friend(self, friend: str):
         key_part = self.generate_key_part(friend)
@@ -238,7 +233,7 @@ class Client:
         aes_key = self.keys[friend] if friend in self.keys else None  # if is not friend, aes_key is None
         if aes_key is None:
             return -1
-        self.send_aes(f"send message|{len(friend)}|{friend}|{from_bytes(encrypt(message, aes_key), str)}")
+        self.send_aes(f"send message|{len(friend)}|{friend}|{conv_from_bytes(encrypt(message, aes_key), str)}")
         data = int(self.receive_aes())
         if data < 0:
             self.last_log = data
@@ -256,16 +251,15 @@ class Client:
             if username not in self.keys:
                 self.get_aes_key(username)
             sent_time = int(sent_time)
-            content = decrypt(to_bytes(content), self.keys[username])
+            content = decrypt(conv_to_bytes(content), self.keys[username])
             dict_message = {"sent_time": sent_time, "content": content, "sender": username}
             self.insert_message(username, dict_message)
 
 
 if __name__ == "__main__":
-    if os.path.exists("Alice.json"):
-        os.remove("Alice.json")
+    if path.exists("Alice.json"):
+        remove("Alice.json")
         print("Alice.json removed")
-        sys.exit(0)
     message1 = {"sender": "Alice", "sent_time": 1, "content": "Hello"}
     message2 = {"sender": "Bob", "sent_time": 2, "content": "Hi"}
     message3 = {"sender": "Alice", "sent_time": 3, "content": "How are you?"}

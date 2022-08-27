@@ -1,10 +1,10 @@
-import time
+from time import time
 
 
 class Message:
     def __init__(self, username: str, content: str, sent_time: int = None):
         if sent_time is None:
-            sent_time = int(time.time() * 1000)
+            sent_time = int(time() * 1000)
         self.username = username
         self.content = content
         self.sent_time = sent_time
