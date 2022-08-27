@@ -43,8 +43,11 @@ def generate_prime(keysize: int) -> int:
     min_increment += min_increment % 2
     increment = randrange(min_increment, 2 * min_increment, 2)
     print("increment:", increment)
+    tries = 0
     while not is_prime(p):
         p += increment
+        tries += 1
+    print("tries:", tries)
     return p
 
 

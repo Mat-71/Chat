@@ -4,7 +4,7 @@
 from random import randrange
 
 
-def rabin_miller(num: int) -> bool:
+def miller_rabin(num: int) -> bool:
     s = num - 1
     t = 0
 
@@ -47,7 +47,7 @@ def is_prime(num: int) -> bool:
         if (num % prime) == 0:
             return False
 
-    return rabin_miller(num)
+    return miller_rabin(num)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ from Conversion import to_bytes as conv_to_bytes, from_bytes as conv_from_bytes
 from Rsa import rsa_crypt as rsa_crypt
 from KeyGenerator import get_key_from_password, random_number
 from Aes import encrypt, decrypt
+from EncryptFile import encrypt_file, decrypt_file
 
 
 # TODO: timeout for socket
@@ -106,10 +107,10 @@ class Client:
                 return conv_from_bytes(message, target_type)
             except IOError as e:
                 if e.errno != EAGAIN and e.errno != EWOULDBLOCK:
-                    print('Reading error: {}'.format(str(e)))
+                    print(f'Reading error: {str(e)}')
                     sys.exit()  # TODO: handle this
             except Exception as e:
-                print('Reading error: '.format(str(e)))
+                print(f'Reading error: {str(e)}')
                 sys.exit()  # TODO: handle this
 
     def receive_aes(self) -> str:
@@ -256,31 +257,31 @@ class Client:
 
 
 if __name__ == "__main__":
-    if path.exists("Alice.json"):
-        remove("Alice.json")
-        print("Alice.json removed")
-    message1 = {"sender": "Alice", "sent_time": 1, "content": "Hello"}
+    if path.exists("alice.json"):
+        remove("alice.json")
+        print("alice.json removed")
+    message1 = {"sender": "alice", "sent_time": 1, "content": "Hello"}
     message2 = {"sender": "Bob", "sent_time": 2, "content": "Hi"}
-    message3 = {"sender": "Alice", "sent_time": 3, "content": "How are you?"}
+    message3 = {"sender": "alice", "sent_time": 3, "content": "How are you?"}
     message4 = {"sender": "Bob", "sent_time": 4, "content": "Fine"}
-    message5 = {"sender": "Alice", "sent_time": 5, "content": "What's up?"}
+    message5 = {"sender": "alice", "sent_time": 5, "content": "What's up?"}
     message6 = {"sender": "Bob", "sent_time": 6, "content": "Nothing"}
-    message7 = {"sender": "Alice", "sent_time": 7, "content": "Bye"}
+    message7 = {"sender": "alice", "sent_time": 7, "content": "Bye"}
     message8 = {"sender": "Bob", "sent_time": 8, "content": "See you"}
 
-    Alice = Client("Alice", "canada", False)
-    Alice.get_friends()
-    Alice.get_pending()
-    Alice.get_requests()
-    Alice.get_messages()
-    """Alice.keys["Bob"] = from_bytes(b"\xab" * 16, int)
-    Alice.messages["Bob"] = [message1, message2, message3, message4, message5, message6, message7, message8]
-    Alice.requests = ["Charles, Denis"]
-    Alice.pending = ["Eve", "Frank"]"""
+    alice = Client("alice", "canada", True)
+    alice.get_friends()
+    alice.get_pending()
+    alice.get_requests()
+    alice.get_messages()
+    """alice.keys["Bob"] = from_bytes(b"\xab" * 16, int)
+    alice.messages["Bob"] = [message1, message2, message3, message4, message5, message6, message7, message8]
+    alice.requests = ["Charles, Denis"]
+    alice.pending = ["Eve", "Frank"]"""
 
-    Alice.save()
+    alice.save()
 
-    Alice_copy = Client("Alice", "canada", False)
+    Alice_copy = Client("alice", "canada", False)
     Alice_copy.load()
     print(Alice_copy.messages)
     print(Alice_copy.keys)

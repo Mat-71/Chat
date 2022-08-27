@@ -35,7 +35,7 @@ class Server:
         data = None
         for i in range(3):
             try:
-                with open(f"user{i}.json") as jsonFile:
+                with open(f"ServerSave{i}.json") as jsonFile:
                     users_2 = load(jsonFile)
                     jsonFile.close()
                 if data is None:
@@ -53,7 +53,7 @@ class Server:
             self.users[user['username']] = User(**user)
 
     def save(self):
-        file_name = f"user{str(self.file_number)}.json"
+        file_name = f"ServerSave{str(self.file_number)}.json"
         self.file_number = (self.file_number + 1) % 3
         with open(file_name, 'w') as outfile:
             outfile.write(dumps([int(time() * 1000), [u.__dict__() for u in self.users.values()]], indent=2))
@@ -249,7 +249,7 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server("", 4040, "YouWontHaveIt")
+    server = Server("", 4040, "fastPassword")
     print(f'Listening for connections on {server.IP}: {server.PORT}...')
     while True:
         server.listen()
