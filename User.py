@@ -7,12 +7,6 @@ class User:
                  pending: dict[str, int] = None):
         if messages is None:
             messages = []
-        if keys is None:
-            keys: dict[str, tuple[int, int]] = {}
-        if requests is None:
-            requests: dict[str, int] = {}
-        if pending is None:
-            pending: dict[str, int] = {}
         self.username = username
         self.pub_key = pub_key
         self.messages = [Message(**message) for message in messages]
@@ -35,11 +29,11 @@ class User:
         key_1, key_2 = self.keys[username]
         return f"{key_1}|{key_2}"
 
-    def get_requests(self):
-        return "|".join([f"{len(name)}|{name}" for name in self.requests])
+    def get_requests(self) -> str:
+        return self.get_str_names(self.requests)
 
-    def get_pending(self):
-        return "|".join([f"{len(name)}|{name}" for name in self.pending])
+    def get_pending(self) -> str:
+        return self.get_str_names(self.pending)
 
     def get_messages(self, n: int = 0) -> str:
         messages = self.messages[:n] if n else self.messages
@@ -73,7 +67,7 @@ class User:
                 self.messages.remove(message)
                 return
 
-    def __dict__(self):
+    def __dict__(self) -> dict[str, str | int]:
         return {
             "username": self.username,
             "pub_key": self.pub_key,

@@ -38,8 +38,8 @@ class Server:
                 with open(f"user{i}.json") as jsonFile:
                     users_2 = load(jsonFile)
                     jsonFile.close()
-                if users is None:
-                    users = users_2
+                if data is None:
+                    data = users_2
                 else:
                     if data[0] < users_2[0]:
                         data = users_2
@@ -47,10 +47,10 @@ class Server:
             except IOError:
                 pass
         self.users = {}
-        if users is not None:
-            users = users[1]
-            for user in users:
-                self.users[user['username']] = User(**user)
+        if data is None:
+            return
+        for user in data[1]:
+            self.users[user['username']] = User(**user)
 
     def save(self):
         file_name = f"user{str(self.file_number)}.json"
