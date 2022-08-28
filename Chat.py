@@ -37,9 +37,13 @@ class Interface:
         self.client.get_pending()
         self.client.get_requests()
         frame = Frame(self.window)
-        log_out_button = Button(frame, text="Log out", command=self.log_out)
-        log_out_button.pack()
         tabs = ttk.Notebook(frame)
+        tabs.place(x=0, y=0, relwidth=1, relheight=1)
+
+        # "Log out" tab
+        log_out_tab = ttk.Frame(tabs)
+        tabs.add(log_out_tab, text="Log out")
+        tabs.bind("<<NotebookTabChanged>>", lambda e: self.log_out() if tabs.index(CURRENT) == 0 else None)
 
         # "Chats" tab
         chats_tab = ttk.Frame(tabs)
@@ -73,7 +77,24 @@ class Interface:
             i += 1
         tabs.add(requests_tab, text="See requests")
 
-        tabs.pack(expand=1, fill=BOTH)
+        if admin_level > 0:
+            # "Admin" tab
+            admin_tab = ttk.Frame(tabs)
+            debug_toggle = IntVar()
+            info_toggle = IntVar()
+            warning_toggle = IntVar()
+            error_toggle = IntVar()
+            debug_toggle_button = Checkbutton(admin_tab, text="Debug", variable=debug_toggle, onvalue=1, offvalue=0, height=5, width=20)
+            info_toggle_button = Checkbutton(admin_tab, text="Info", variable=info_toggle, onvalue=1, offvalue=0, height=5, width=20)
+            warning_toggle_button = Checkbutton(admin_tab, text="Warning", variable=warning_toggle, onvalue=1, offvalue=0, height=5, width=20)
+            error_toggle_button = Checkbutton(admin_tab, text="Error", variable=error_toggle, onvalue=1, offvalue=0, height=5, width=20)
+            debug_toggle_button.grid(row=0, column=0, sticky=W, pady=2)
+            info_toggle_button.grid(row=1, column=0, sticky=W, pady=2)
+            warning_toggle_button.grid(row=2, column=0, sticky=W, pady=2)
+            error_toggle_button.grid(row=3, column=0, sticky=W, pady=2)
+            tabs.add(admin_tab, text="Admin")
+
+        tabs.select(1)
         return frame
 
     def chat_frame(self, friend: str = None):
@@ -128,6 +149,7 @@ class Interface:
         self.switch_frame("menu")
 
     def log_out(self):
+        self.client.log_out()
         self.client = None
         self.switch_frame("connexion")
 

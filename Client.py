@@ -23,7 +23,7 @@ class Client:
         self.server_socket.connect(self.server_address)
         self.server_socket.setblocking(False)
         self.username = _username
-        self.public_key, self.private_key = get_key_from_password(_username, password)
+        self.public_key, self.private_key = get_key_from_password(_username, password, 128 if _username == "test" else 2048)
         self.messages = {}  # messages = {friend: [message, message, message]}
         self.keys: dict[str, int] = {}  # key = {"username": aes_key}
         self.requests = []  # requests = [username, username, username]
@@ -262,9 +262,13 @@ class Client:
             dict_message = {"sent_time": sent_time, "content": content, "sender": username}
             self.insert_message(username, dict_message)
 
+    def get_admin_level(self):
+        self.send_aes("get admin level")
+        return int(self.receive_aes())
+
     def log_out(self):
-        self.send_aes("log out")  # TODO: make server handle this and call from Chat interface
-        self.last_log = int(self.receive_aes())
+        # self.send_aes("log out")  # TODO: make server handle this and call from Chat interface
+        # self.last_log = int(self.receive_aes())
         self.save()
 
 
