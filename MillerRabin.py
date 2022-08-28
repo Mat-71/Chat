@@ -1,4 +1,4 @@
-# credits to https://python.algorithms-library.com/ciphers/rabin_miller
+# Credits to https://python.algorithms-library.com/ciphers/rabin_miller
 # Primality Testing with the Rabin-Miller Algorithm
 
 from random import randrange

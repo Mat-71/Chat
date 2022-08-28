@@ -1,7 +1,10 @@
+# Credits to https://inventwithpython.com/blog/2012/04/06/stop-using-print-for-debugging-a-5-minute-quickstart-guide-to-pythons-logging-module/
+
 from json import load, dumps
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from time import time
 from select import select
+import logging
 
 from Conversion import to_bytes, from_bytes
 from Rsa import rsa_crypt
@@ -11,6 +14,16 @@ from User import User
 
 
 # TODO: timeout for socket
+# TODO: possibility to change shutdown the server from admin session
+# [R] - received
+# [S] - sent
+# [REG] - sign in
+# [LOG] - log in
+# [OUT] - sign out
+# [AES] - AES encrypted
+# [T] - duration of function
+# [UNK] - unknown
+# [EXC] - exception
 
 class Server:
     def __init__(self, ip: str, port: int, password: str, key_size: int = 4096):
@@ -71,20 +84,22 @@ class Server:
                 message += new_part
             return from_bytes(message, target_type)
         except Exception as e:
-            print("Exception (receive):", e)
+            logger.error(f"[R-EXC] {e}")
             return False
 
     def header(self, data: bytes) -> bytes:
         message_header = to_bytes(len(data))
         return b'\x00' * (self.HEADER_LENGTH - len(message_header)) + message_header
 
-    def send(self, data, client: socket):
+    def send(self, data, client: socket, aes=False):
+        if not aes:
+            logger.info(f"[S] {data}")
         data = to_bytes(data)
         client.send(self.header(data) + data)
 
     def send_aes(self, data, aes_key: int, client: socket):
-        print("sent:", data)
-        self.send(encrypt(str(data), aes_key), client)
+        logger.info(f"[S-AES] {data}")
+        self.send(encrypt(str(data), aes_key), client, True)
 
     def send_success(self, client: socket, aes_key: int):
         self.send_aes(0, aes_key, client)
@@ -97,7 +112,6 @@ class Server:
 
     def aes_protocol(self, client: socket, data: str):
         # data = "RAND_NUM|PUB_KEY"
-        print("received:", data)
         c_rand_num, c_pub_key = data.split("|", 1)
         c_rand_num = rsa_crypt(int(c_rand_num), self.private_key)
         c_pub_key = rsa_crypt(int(c_pub_key), self.private_key)
@@ -124,23 +138,23 @@ class Server:
         if client_data["check"] != check:
             return self.send_fail(client, aes_key, 1)
         self.send_success(client, aes_key)
-        print('Accepted new connection from {}'.format(client_data["username"]))
+        logger.info(f"[LOG] {client_data['username']}")
         client_data["auth"] = True
 
     def sign_up(self, client_data: dict, aes_key: int, client: socket, data: str):
         # data = "sign up|USER_PUB_KEY|USERNAME"
         user_pub_key, username = data.split("|", 1)
         user_pub_key = int(user_pub_key)
-        check = True if user_pub_key < 0 else False
+        check = user_pub_key < 0
         user_pub_key = abs(user_pub_key)
         if username in self.users:
             return self.send_fail(client, aes_key, 1)
-        if (len(username) < 3) and not check:
+        if (len(username) < 3) and not check:  # TODO: add more complex username check
             return self.send_fail(client, aes_key, 2)
         client_data['username'] = username
         client_data['auth'] = True
         self.users[username] = User(username, user_pub_key)
-        print('Accepted new connection from {}'.format(username))
+        logger.info(f"[REG] {client_data['username']}")
         self.send_success(client, aes_key)
 
     def request_friend(self, aes_key: int, client: socket, user: User, data: str):
@@ -186,7 +200,7 @@ class Server:
         client_data = self.clients[client]
         aes_key = client_data["aes_key"]
         data = decrypt(to_bytes(data), aes_key)
-        print("received:", data)
+        logger.info(f"[R-AES] {data}")
         action = data.split("|", 1)[0]
         data = data.removeprefix(action).removeprefix('|')
         match action:
@@ -219,40 +233,58 @@ class Server:
             case "get messages":
                 return self.send_aes(user.get_messages(), aes_key, client)
             case _:
+                logger.warning(f"[R-AES-UNK] Unknown action {action}")
                 return self.send_fail(client, aes_key)
 
     def listen_client(self, client: socket, data: str):
         if not data:
             return self.sockets_list.remove(client)
         if data == 'key':  # send key to client
+            logger.info("[R] key")
             return self.send_public_key(client)
         if data.startswith("aes"):  # server send aes key to client
-            print("received aes key:", data)
+            logger.info(f"[R] {data}")
             return self.aes_protocol(client, data.removeprefix("aes").removeprefix('|'))
         if client in self.clients:  # connection is secure
             self.aes_data_receive(client, data)
         else:
+            logger.warning(f"[R-UNK] {data}")
             self.send("-1", client)
 
     def listen(self):
         read_sockets, _, exception_sockets = select(self.sockets_list, [], self.sockets_list)
         for notified_socket in read_sockets:
-            a = time()
+            start = time()
             if notified_socket == self.server_socket:
                 self.sockets_list.append(self.server_socket.accept()[0])
             else:
                 self.listen_client(notified_socket, self.receive(notified_socket))
-            print(f"operated in {time() - a} seconds")
+            logger.debug(f"[T] listen_client: {time() - start}")
         for notified_socket in exception_sockets:
             self.sockets_list.remove(notified_socket)
-            print("Socket {} is offline".format(notified_socket))
+            logger.warning(f"[OUT] offline socket: {notified_socket}")
             if notified_socket in self.clients:
                 del self.clients[notified_socket]
 
 
 if __name__ == "__main__":
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+    fh = logging.FileHandler('logs_server.log')
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.DEBUG)
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
+
     server = Server("", 4040, "fastPassword")
-    print(f'Listening for connections on {server.IP}: {server.PORT}...')
+    logger.info("Listening on port 4040")
     while True:
         server.listen()
         server.save()
