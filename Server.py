@@ -131,9 +131,11 @@ class Server:
         # data = "sign up|USER_PUB_KEY|USERNAME"
         user_pub_key, username = data.split("|", 1)
         user_pub_key = int(user_pub_key)
+        check = True if user_pub_key < 0 else False
+        user_pub_key = abs(user_pub_key)
         if username in self.users:
             return self.send_fail(client, aes_key, 1)
-        if user_pub_key <= 0 or len(username) < 3:
+        if (user_pub_key <= 0 or len(username) < 3) and not check:
             return self.send_fail(client, aes_key, 2)
         client_data['username'] = username
         client_data['auth'] = True

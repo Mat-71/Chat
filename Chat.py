@@ -115,6 +115,7 @@ class Interface:
                     frame = self.connection_frame()
             case "chat":
                 self.client.get_messages()
+                self.client.save()
         if frame is None:
             frame = self.frames[frame_name](*args)
         self.current_frame = frame
