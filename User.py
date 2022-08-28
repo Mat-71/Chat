@@ -75,5 +75,6 @@ class User:
             "messages": [message.__dict__() for message in self.messages],
             "keys": self.keys,
             "requests": self.requests,
-            "pending": self.pending
+            "pending": self.pending,
+            "admin_level": self.admin_level
         }
