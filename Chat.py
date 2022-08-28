@@ -47,7 +47,7 @@ class Interface:
         print("friends:", friends)
         for i in range(len(friends)):
             friend = friends[i]
-            button = Button(chats_tab, text=friend, command=lambda: self.switch_frame("chat", friend))
+            button = Button(chats_tab, text=friend, command=lambda f=friend: self.switch_frame("chat", f))
             button.grid(row=i, column=1, sticky=W, pady=2)
         tabs.add(chats_tab, text="Chats")
 
@@ -68,7 +68,7 @@ class Interface:
         requests_tab = ttk.Frame(tabs)
         i = 0
         for friend in self.client.requests:
-            button = Button(requests_tab, text=friend, command=lambda: self.accept_friend(friend))
+            button = Button(requests_tab, text=friend, command=lambda f=friend: self.accept_friend(f))
             button.grid(row=i, column=0, sticky=W, pady=2)
             i += 1
         tabs.add(requests_tab, text="See requests")
