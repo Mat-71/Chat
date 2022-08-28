@@ -232,6 +232,8 @@ class Server:
                 return self.message_reception(client, aes_key, user, data)
             case "get messages":
                 return self.send_aes(user.get_messages(), aes_key, client)
+            case "get admin level":
+                return self.send_aes(user.admin_level, aes_key, client)
             case _:
                 logger.warning(f"[R-AES-UNK] Unknown action {action}")
                 return self.send_fail(client, aes_key)

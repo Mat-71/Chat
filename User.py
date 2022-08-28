@@ -4,11 +4,12 @@ from Message import Message
 class User:
     def __init__(self, username: str, pub_key: int, messages: list[dict[str, str | int]] = None,
                  keys: dict[str, tuple[int, int]] = None, requests: dict[str, int] = None,
-                 pending: dict[str, int] = None):
+                 pending: dict[str, int] = None, admin_level: int = 0):
         if messages is None:
             messages = []
         self.username = username
         self.pub_key = pub_key
+        self.admin_level = admin_level
         self.messages = [Message(**message) for message in messages]
         # messages = [message, message, message]
         self.keys = dict[str, tuple[int, int]]() if keys is None else keys

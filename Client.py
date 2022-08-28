@@ -160,6 +160,7 @@ class Client:
                 if username not in self.messages:
                     self.messages[username] = []
 
+
     def get_aes_key(self, friend: str):
         self.send_aes(f"get aes key|{friend}")
         data = self.receive_aes()

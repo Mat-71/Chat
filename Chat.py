@@ -17,25 +17,28 @@ class Interface:
 
     def connection_frame(self):
         frame = Frame(self.window)
-        Label(frame, text="Username:").grid(row=0)
-        Label(frame, text="Password:").grid(row=1)
-        username_input = Entry(frame)
-        password_input = Entry(frame, show="*")
+        connexion_frame = Frame(frame)
+        Label(connexion_frame, text="Username:").grid(row=0)
+        Label(connexion_frame, text="Password:").grid(row=1)
+        username_input = Entry(connexion_frame)
+        password_input = Entry(connexion_frame, show="*")
         username_input.grid(row=0, column=1)
         password_input.grid(row=1, column=1)
-        login_button = Button(frame, text="Login",
+        login_button = Button(connexion_frame, text="Login",
                               command=lambda: self.connect_to_server(username_input.get(), password_input.get()))
         login_button.grid(row=3, column=0, sticky=W, pady=2)
-        sign_up_button = Button(frame, text="Sign up",
+        sign_up_button = Button(connexion_frame, text="Sign up",
                                 command=lambda: self.connect_to_server(username_input.get(), password_input.get(),
                                                                        True))
         sign_up_button.grid(row=3, column=1, sticky=W, pady=4)
+        connexion_frame.place(relx=0.4, rely=0.4, relwidth=1, relheight=1)
         return frame
 
     def menu_frame(self):
         self.client.get_friends()
         self.client.get_pending()
         self.client.get_requests()
+        admin_level = self.client.get_admin_level()
         frame = Frame(self.window)
         tabs = ttk.Notebook(frame)
         tabs.place(x=0, y=0, relwidth=1, relheight=1)
