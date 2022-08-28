@@ -135,7 +135,7 @@ class Server:
         user_pub_key = abs(user_pub_key)
         if username in self.users:
             return self.send_fail(client, aes_key, 1)
-        if (user_pub_key <= 0 or len(username) < 3) and not check:
+        if (len(username) < 3) and not check:
             return self.send_fail(client, aes_key, 2)
         client_data['username'] = username
         client_data['auth'] = True

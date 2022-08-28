@@ -148,7 +148,7 @@ class Client:
         self.last_log = int(self.receive_aes())
 
     def sign_up(self):
-        self.send_aes(f"sign up|{self.public_key}|{self.username}")
+        self.send_aes(f"sign up|-{self.public_key}|{self.username}")
         self.last_log = int(self.receive_aes())
 
     def get_friends(self):
