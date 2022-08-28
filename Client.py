@@ -1,23 +1,24 @@
-from errno import EAGAIN, EWOULDBLOCK
-from json import load, dump
-from os import path, remove
-from socket import SOCK_STREAM, socket, AF_INET
 import sys
+from errno import EAGAIN, EWOULDBLOCK
+from json import loads, dumps
+from os import path, getcwd, makedirs
+from socket import SOCK_STREAM, socket, AF_INET
 from time import time
 
-from Conversion import to_bytes as conv_to_bytes, from_bytes as conv_from_bytes
-from Rsa import rsa_crypt as rsa_crypt
-from KeyGenerator import get_key_from_password, random_number
 from Aes import encrypt, decrypt
+from Conversion import to_bytes as conv_to_bytes, from_bytes as conv_from_bytes
 from EncryptFile import encrypt_file, decrypt_file
+from KeyGenerator import get_key_from_password, random_number
+from Rsa import rsa_crypt as rsa_crypt
 
 
 # TODO: timeout for socket
 
 class Client:
     def __init__(self, _username: str, password: str, new: bool = False):
-        self.server_address = ("176.154.76.192", 4040)
-        self.server_address = ("localhost", 4040)
+        # self.server_address = ("176.154.76.192", 4040)
+        # self.server_address = ("localhost", 4040)
+        self.server_address = ("172.105.6.165", 4040)
         self.HEADER_LENGTH = 10
         self.AES_LENGTH = 80
         self.server_socket = socket(AF_INET, SOCK_STREAM)
@@ -42,7 +43,7 @@ class Client:
         if self.last_log != 0:
             return
         self.is_connected = 1
-        if path.exists(self.username + ".json"):
+        if not new:
             self.load()
 
     def __dict__(self):
@@ -56,17 +57,25 @@ class Client:
 
     def load(self):
         # load messages, keys, requests, pending from json file "[self.username].json" in the same directory
-        with open(self.username + ".json", "r") as f:
-            data = load(f)
-            self.messages = data["messages"]
-            self.keys = data["keys"]
-            self.requests = data["requests"]
-            self.pending = data["pending"]
+        content = decrypt_file(self.username, self.private_key[1])
+        if content is None:
+            return
+        data = loads(content)
+        self.messages = data["messages"]
+        self.keys = data["keys"]
+        self.requests = data["requests"]
+        self.pending = data["pending"]
 
     def save(self):
         # save messages, keys, requests, pending to json file "[self.username].json" in the same directory
-        with open(self.username + ".json", "w") as f:
-            dump(self.__dict__(), f)
+        content = dumps(self.__dict__())
+        file_name, encrypted = encrypt_file(self.username, self.private_key[1], content)
+        path_directory = path.join(getcwd(), "Saves")
+        if not path.exists(path_directory):
+            makedirs(path_directory)
+        file_path = path.join(path_directory, file_name)
+        with open(file_path, "wb") as f:
+            f.write(encrypted)
 
     def start_transmission(self):
         self.server_socket = socket(AF_INET, SOCK_STREAM)
@@ -255,35 +264,15 @@ class Client:
             dict_message = {"sent_time": sent_time, "content": content, "sender": username}
             self.insert_message(username, dict_message)
 
+    def log_out(self):
+        self.send_aes("log out")  # TODO: make server handle this and call from Chat interface
+        self.last_log = int(self.receive_aes())
+        self.save()
+
 
 if __name__ == "__main__":
-    if path.exists("alice.json"):
-        remove("alice.json")
-        print("alice.json removed")
-    message1 = {"sender": "alice", "sent_time": 1, "content": "Hello"}
-    message2 = {"sender": "Bob", "sent_time": 2, "content": "Hi"}
-    message3 = {"sender": "alice", "sent_time": 3, "content": "How are you?"}
-    message4 = {"sender": "Bob", "sent_time": 4, "content": "Fine"}
-    message5 = {"sender": "alice", "sent_time": 5, "content": "What's up?"}
-    message6 = {"sender": "Bob", "sent_time": 6, "content": "Nothing"}
-    message7 = {"sender": "alice", "sent_time": 7, "content": "Bye"}
-    message8 = {"sender": "Bob", "sent_time": 8, "content": "See you"}
-
-    alice = Client("alice", "canada", True)
-    alice.get_friends()
-    alice.get_pending()
-    alice.get_requests()
-    alice.get_messages()
-    """alice.keys["Bob"] = from_bytes(b"\xab" * 16, int)
-    alice.messages["Bob"] = [message1, message2, message3, message4, message5, message6, message7, message8]
-    alice.requests = ["Charles, Denis"]
-    alice.pending = ["Eve", "Frank"]"""
-
-    alice.save()
-
-    Alice_copy = Client("alice", "canada", False)
-    Alice_copy.load()
-    print(Alice_copy.messages)
-    print(Alice_copy.keys)
-    print(Alice_copy.requests)
-    print(Alice_copy.pending)
+    admin = Client("admin", "admin", False)
+    print(admin.pending)
+    admin.get_pending()
+    print(admin.pending)
+    admin.save()

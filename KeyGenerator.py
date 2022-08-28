@@ -1,4 +1,4 @@
-from math import log
+from math import log, gcd
 from random import seed as rand_seed, randrange, getrandbits
 
 from MillerRabin import is_prime
@@ -42,6 +42,8 @@ def generate_prime(keysize: int) -> int:
     min_increment = int(1 / prob)
     min_increment += min_increment % 2
     increment = randrange(min_increment, 2 * min_increment, 2)
+    while gcd(p, increment) > 1:
+        p += 2
     print("increment:", increment)
     tries = 0
     while not is_prime(p):
