@@ -16,8 +16,6 @@ from Rsa import rsa_crypt as rsa_crypt
 
 class Client:
     def __init__(self, _username: str, password: str, new: bool = False):
-        # self.server_address = ("176.154.76.192", 4040)
-        # self.server_address = ("localhost", 4040)
         self.server_address = ("172.105.6.165", 4040)
         self.HEADER_LENGTH = 10
         self.AES_LENGTH = 80
