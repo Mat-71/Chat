@@ -83,18 +83,46 @@ class Interface:
         if admin_level > 0:
             # "Admin" tab
             admin_tab = ttk.Frame(tabs)
+
+            # toggle frame
+            toggle_frame = Frame(admin_tab, borderwidth=1, relief=SUNKEN)
             debug_toggle = IntVar()
             info_toggle = IntVar()
             warning_toggle = IntVar()
             error_toggle = IntVar()
-            debug_toggle_button = Checkbutton(admin_tab, text="Debug", variable=debug_toggle, onvalue=1, offvalue=0, height=5, width=20)
-            info_toggle_button = Checkbutton(admin_tab, text="Info", variable=info_toggle, onvalue=1, offvalue=0, height=5, width=20)
-            warning_toggle_button = Checkbutton(admin_tab, text="Warning", variable=warning_toggle, onvalue=1, offvalue=0, height=5, width=20)
-            error_toggle_button = Checkbutton(admin_tab, text="Error", variable=error_toggle, onvalue=1, offvalue=0, height=5, width=20)
+            debug_toggle_button = Checkbutton(toggle_frame, text="Debug", variable=debug_toggle, onvalue=1, offvalue=0,
+                                              height=1, width=20, anchor=W)
+            info_toggle_button = Checkbutton(toggle_frame, text="Info", variable=info_toggle, onvalue=1, offvalue=0,
+                                             height=1, width=20, anchor=W)
+            warning_toggle_button = Checkbutton(toggle_frame, text="Warning", variable=warning_toggle, onvalue=1,
+                                                offvalue=0, height=1, width=20, anchor=W)
+            error_toggle_button = Checkbutton(toggle_frame, text="Error", variable=error_toggle, onvalue=1, offvalue=0,
+                                              height=1, width=20, anchor=W)
             debug_toggle_button.grid(row=0, column=0, sticky=W, pady=2)
             info_toggle_button.grid(row=1, column=0, sticky=W, pady=2)
             warning_toggle_button.grid(row=2, column=0, sticky=W, pady=2)
             error_toggle_button.grid(row=3, column=0, sticky=W, pady=2)
+            toggle_frame.place(relx=0, rely=0, relwidth=0.3, relheight=0.4)
+
+            # logs frame
+            logs_frame = Frame(admin_tab, borderwidth=1, relief=SUNKEN)
+            logs = Text(logs_frame, wrap=WORD)
+            logs.pack(fill=BOTH, expand=1)
+            logs_frame.place(relx=0.3, rely=0, relwidth=0.7, relheight=0.9)
+
+            # clients frame
+            clients_frame = Frame(admin_tab, borderwidth=1, relief=SUNKEN)
+            clients = Text(clients_frame, wrap=WORD)
+            clients.pack(fill=BOTH, expand=1)
+            clients_frame.place(relx=0, rely=0.4, relwidth=0.3, relheight=0.6)
+
+            # command frame
+            command_frame = Frame(admin_tab, borderwidth=1, relief=SUNKEN)
+            command = Entry(command_frame)
+            command.pack(fill=BOTH, expand=1)
+            command.bind("<Return>", lambda e: (self.send_command(command.get()), command.delete(0, END)))
+            command_frame.place(relx=0.3, rely=0.9, relwidth=0.7, relheight=0.1)
+
             tabs.add(admin_tab, text="Admin")
 
         tabs.select(1)
@@ -190,6 +218,10 @@ class Interface:
         return f"{sender} [{Interface.date_str(sent_time)}]: {content}"
         """
         return content
+
+    def send_command(self, command: str):
+        print("command:", command)
+        self.client.send_aes(f"admin|command|{command}")
 
 
 if __name__ == "__main__":
