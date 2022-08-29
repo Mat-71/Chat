@@ -1,4 +1,3 @@
-# Credits to https://inventwithpython.com/blog/2012/04/06/stop-using-print-for-debugging-a-5-minute-quickstart-guide-to-pythons-logging-module/
 import subprocess
 from json import load, dumps
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
@@ -205,7 +204,9 @@ class Server:
     def admin_command(self, client: socket, aes_key: int, data: str):
         # data = "COMMAND | ARGS"
         # TODO: add more commands
-        command, args = data.split("|", 1)
+        command = data.split("|", 1)[0]
+        data = data.removeprefix(command).removeprefix('|')
+        args = data.split(" ")
         match command:
             case "shutdown":
                 self.send_success(client, aes_key)
@@ -215,10 +216,11 @@ class Server:
                 return self.restart()
             case "promote":
                 # args = "LEVEL USERNAME"
-                level, username = args.split(" ", 1)
+                print(args)
+                level, username = args
                 if username not in self.users:
                     return self.send_fail(client, aes_key, 1)
-                self.users[username].admin_level = level
+                self.users[username].admin_level = int(level)
                 return self.send_success(client, aes_key)
             case _:
                 return self.send_fail(client, aes_key)
@@ -227,7 +229,8 @@ class Server:
         # data = "USERNAME_LENGTH|USERNAME|CONTENT"
         if user.admin_level < 1:
             return self.send_fail(client, aes_key)
-        action, data = data.split("|", 1)
+        action = data.split("|", 1)[0]
+        data = data.removeprefix(action).removeprefix('|')
         match action:
             case "command":
                 return self.admin_command(client, aes_key, data)
@@ -279,19 +282,22 @@ class Server:
                 return self.send_fail(client, aes_key)
 
     def listen_client(self, client: socket, data: str):
-        if not data:
-            return self.sockets_list.remove(client)
-        if data == 'key':  # send key to client
-            logger.info("[R] key")
-            return self.send_public_key(client)
-        if data.startswith("aes"):  # server send aes key to client
-            logger.info(f"[R] {data}")
-            return self.aes_protocol(client, data.removeprefix("aes").removeprefix('|'))
-        if client in self.clients:  # connection is secure
-            self.aes_data_receive(client, data)
-        else:
-            logger.warning(f"[R-UNK] {data}")
-            self.send("-1", client)
+        try:
+            if not data:
+                return self.sockets_list.remove(client)
+            if data == 'key':  # send key to client
+                logger.info("[R] key")
+                return self.send_public_key(client)
+            if data.startswith("aes"):  # server send aes key to client
+                logger.info(f"[R] {data}")
+                return self.aes_protocol(client, data.removeprefix("aes").removeprefix('|'))
+            if client in self.clients:  # connection is secure
+                self.aes_data_receive(client, data)
+            else:
+                logger.warning(f"[R-UNK] {data}")
+                self.send("-1", client)
+        except Exception as e:
+            logger.error(f"[ERR] {e}")
 
     def listen(self):
         read_sockets, _, exception_sockets = select(self.sockets_list, [], self.sockets_list)

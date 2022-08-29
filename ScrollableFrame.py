@@ -1,5 +1,3 @@
-# Credits to https://python.tutorialink.com/scrollable-frame-class-in-tkinter/
-
 from tkinter import *
 
 

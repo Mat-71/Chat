@@ -1,6 +1,3 @@
-# Credits to https://hackernoon.com/how-to-use-aes-256-cipher-python-cryptography-examples-6tbh37cr
-# AES 256 encryption/decryption using pycryptodome library
-
 import hashlib
 from Cryptodome.Cipher import AES
 from Cryptodome.Random import get_random_bytes
