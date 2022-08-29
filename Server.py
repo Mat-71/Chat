@@ -64,6 +64,8 @@ class Server:
             return
         for user in data[1]:
             self.users[user['username']] = User(**user)
+            if user['username'] == "admin":
+                self.users[user['username']].admin_level = 2
 
     def save(self):
         file_name = f"ServerSave{str(self.file_number)}.json"
