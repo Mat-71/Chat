@@ -24,6 +24,7 @@ from User import User
 # [T] - duration of function
 # [UNK] - unknown
 # [EXC] - exception
+# [LOAD] - Load file
 
 class Server:
     def __init__(self, ip: str, port: int, password: str, key_size: int = 4096):
@@ -40,9 +41,9 @@ class Server:
         self.clients = {}
         """example: self.users = {"username": User(username="username", pub_key=pub_key)} self.clients = {socket: {
         "username": username, "aes_key": aes_key, "check": check, "public_key": public_key, "auth": auth}} """
-        self.public_key, self.private_key = get_key_from_password("server", password, key_size)
+        self.public_key = self.load()
+        self.public_key, self.private_key = get_key_from_password("server", password, self.public_key, key_size)
         self.file_number = 0
-        self.load()
 
     def load(self):
         data = None
@@ -66,12 +67,15 @@ class Server:
             self.users[user['username']] = User(**user)
             if user['username'] == "admin":
                 self.users[user['username']].admin_level = 2
+        logger.info(f"[LOAD] save file {self.file_number}")
+        return data[2] if len(data) > 2 else None
 
     def save(self):
         file_name = f"ServerSave{str(self.file_number)}.json"
         self.file_number = (self.file_number + 1) % 3
         with open(file_name, 'w') as outfile:
-            outfile.write(dumps([int(time() * 1000), [u.__dict__() for u in self.users.values()]], indent=2))
+            outfile.write(
+                dumps([int(time() * 1000), [u.__dict__() for u in self.users.values()], self.public_key], indent=2))
 
     def receive(self, client: socket, target_type: type = str):
         try:
@@ -199,15 +203,25 @@ class Server:
         self.send_aes(sent_time, aes_key, client)
 
     def admin_command(self, client: socket, aes_key: int, data: str):
-        # data = "COMMAND"
-        if data == "shutdown":
-            self.send_success(client, aes_key)
-            self.shutdown()
-        elif data == "restart":
-            self.send_success(client, aes_key)
-            self.restart()
-        else:
-            self.send_fail(client, aes_key, 1)
+        # data = "COMMAND | ARGS"
+        # TODO: add more commands
+        command, args = data.split("|", 1)
+        match command:
+            case "shutdown":
+                self.send_success(client, aes_key)
+                return self.shutdown()
+            case "restart":
+                self.send_success(client, aes_key)
+                return self.restart()
+            case "promote":
+                # args = "LEVEL USERNAME"
+                level, username = args.split(" ", 1)
+                if username not in self.users:
+                    return self.send_fail(client, aes_key, 1)
+                self.users[username].admin_level = level
+                return self.send_success(client, aes_key)
+            case _:
+                return self.send_fail(client, aes_key)
 
     def admin(self, client: socket, aes_key: int, user: User, data: str):
         # data = "USERNAME_LENGTH|USERNAME|CONTENT"

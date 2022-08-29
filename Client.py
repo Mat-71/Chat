@@ -23,7 +23,8 @@ class Client:
         self.server_socket.connect(self.server_address)
         self.server_socket.setblocking(False)
         self.username = _username
-        self.public_key, self.private_key = get_key_from_password(_username, password, 128 if _username == "test" else 2048)
+        self.public_key, self.private_key = get_key_from_password(_username, password,
+                                                                  key_size=128 if _username == "test" else 2048)
         self.messages = {}  # messages = {friend: [message, message, message]}
         self.keys: dict[str, int] = {}  # key = {"username": aes_key}
         self.requests = []  # requests = [username, username, username]
@@ -159,7 +160,6 @@ class Client:
                 self.get_aes_key(username)
                 if username not in self.messages:
                     self.messages[username] = []
-
 
     def get_aes_key(self, friend: str):
         self.send_aes(f"get aes key|{friend}")

@@ -11,7 +11,7 @@ class Interface:
         self.client = None
         self.window = Tk()
         self.window.title("Chat")
-        self.window.geometry("1920x1080")
+        self.window.geometry("600x400")
         self.current_frame = None
         self.frames = {"connexion": self.connection_frame, "menu": self.menu_frame, "chat": self.chat_frame}
 

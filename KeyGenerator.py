@@ -33,8 +33,8 @@ def random_number(size: int, seeded=False) -> int:
     return randrange(2 ** (size - 1), 2 ** size - 1)
 
 
-def generate_prime(keysize: int) -> int:
-    p = random_number(keysize, True)
+def generate_prime(key_size: int) -> int:
+    p = random_number(key_size, True)
     if p % 2 == 0:
         p += 1
     ln = log(p)
@@ -53,12 +53,14 @@ def generate_prime(keysize: int) -> int:
     return p
 
 
-def generate_large_primes_with_password(seed: int, keysize: int) -> tuple[int, int]:
+def generate_large_primes_with_password(seed: int, key_size: int, public_key: int) -> tuple[int, int]:
     rand_seed(seed, 2)
-    return generate_prime(keysize), generate_prime(keysize)
+    p = generate_prime(key_size)
+    return p, generate_prime(key_size) if public_key is None else public_key // p
 
 
-def get_key_from_password(username: str, password: str, keysize: int = 2048) -> tuple[int, tuple[int, int]]:
+def get_key_from_password(username: str, password: str, public_key: int = None, key_size: int = 2048) -> tuple[
+        int, tuple[int, int]]:
     if not isinstance(username, str):
         raise TypeError(f"get_key_from_password | got {username} (type: {type(username).__name__} instead of str)")
     if not isinstance(password, str):
@@ -67,12 +69,17 @@ def get_key_from_password(username: str, password: str, keysize: int = 2048) -> 
     _seed = getrandbits(256)
     rand_seed(password)
     _seed ^= getrandbits(256)
-    return rsa_key_gen(generate_large_primes_with_password(_seed, keysize))
+    return rsa_key_gen(generate_large_primes_with_password(_seed, key_size, public_key))
 
 
 if __name__ == "__main__":
     import time
 
     start = time.time()
-    print(get_key_from_password("Alice", "canada", 2048)[0])
+    a = get_key_from_password("Alice", "canada", key_size=2048)[0]
+    print(a)
+    print(time.time() - start)
+    start = time.time()
+    a = get_key_from_password("Alice", "canada", a, 2048)[0]
+    print(a)
     print(time.time() - start)
