@@ -306,7 +306,7 @@ class Server:
     def restart(self):
         self.shutdown(False)
         logger.info("[OUT] Server restart")
-        subprocess.run(["py", "Server.py", "&"])
+        subprocess.run(["python3.10", "Server.py", "&"])
         exit(0)
 
 
