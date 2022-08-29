@@ -40,9 +40,10 @@ class Server:
         self.clients = {}
         """example: self.users = {"username": User(username="username", pub_key=pub_key)} self.clients = {socket: {
         "username": username, "aes_key": aes_key, "check": check, "public_key": public_key, "auth": auth}} """
+        self.file_number = 0
         self.public_key = self.load()
         self.public_key, self.private_key = get_key_from_password("server", password, self.public_key, key_size)
-        self.file_number = 0
+
 
     def load(self):
         data = None
@@ -59,6 +60,7 @@ class Server:
                         self.file_number = (i + 1) % 3
             except IOError:
                 pass
+            logger.info(f"[LOAD] save file {self.file_number}")
         self.users = {}
         if data is None:
             return
@@ -66,7 +68,6 @@ class Server:
             self.users[user['username']] = User(**user)
             if user['username'] == "admin":
                 self.users[user['username']].admin_level = 2
-        logger.info(f"[LOAD] save file {self.file_number}")
         return data[2] if len(data) > 2 else None
 
     def save(self):
