@@ -1,5 +1,5 @@
 # Credits to https://inventwithpython.com/blog/2012/04/06/stop-using-print-for-debugging-a-5-minute-quickstart-guide-to-pythons-logging-module/
-
+import subprocess
 from json import load, dumps
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from time import time
@@ -196,6 +196,28 @@ class Server:
         sent_time = self.users[friend].new_message(content, user.username)
         self.send_aes(sent_time, aes_key, client)
 
+    def admin_command(self, client: socket, aes_key: int, data: str):
+        # data = "COMMAND"
+        if data == "shutdown":
+            self.send_success(client, aes_key)
+            self.shutdown()
+        elif data == "restart":
+            self.send_success(client, aes_key)
+            self.restart()
+        else:
+            self.send_fail(client, aes_key, 1)
+
+    def admin(self, client: socket, aes_key: int, user: User, data: str):
+        # data = "USERNAME_LENGTH|USERNAME|CONTENT"
+        if user.admin_level < 1:
+            return self.send_fail(client, aes_key)
+        action, data = data.split("|", 1)
+        match action:
+            case "command":
+                return self.admin_command(client, aes_key, data)
+            case _:
+                return self.send_fail(client, aes_key)
+
     def aes_data_receive(self, client: socket, data: str):
         client_data = self.clients[client]
         aes_key = client_data["aes_key"]
@@ -234,6 +256,8 @@ class Server:
                 return self.send_aes(user.get_messages(), aes_key, client)
             case "get admin level":
                 return self.send_aes(user.admin_level, aes_key, client)
+            case "admin":
+                return self.admin(client, aes_key, user, data)
             case _:
                 logger.warning(f"[R-AES-UNK] Unknown action {action}")
                 return self.send_fail(client, aes_key)
@@ -267,6 +291,21 @@ class Server:
             logger.warning(f"[OUT] offline socket: {notified_socket}")
             if notified_socket in self.clients:
                 del self.clients[notified_socket]
+
+    def shutdown(self, close_server=True):
+        for client in self.clients:
+            client.close()
+        self.server_socket.close()
+        self.save()
+        logger.info("[OUT] Server shutdown")
+        if close_server:
+            exit(0)
+
+    def restart(self):
+        self.shutdown(False)
+        logger.info("[OUT] Server restart")
+        subprocess.call(["py", "Server.py"])
+        exit(0)
 
 
 if __name__ == "__main__":
