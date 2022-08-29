@@ -44,7 +44,6 @@ class Server:
         self.public_key = self.load()
         self.public_key, self.private_key = get_key_from_password("server", password, self.public_key, key_size)
 
-
     def load(self):
         data = None
         for i in range(3):
@@ -60,7 +59,7 @@ class Server:
                         self.file_number = (i + 1) % 3
             except IOError:
                 pass
-            logger.info(f"[LOAD] save file {self.file_number}")
+        logger.info(f"[LOAD] save file {self.file_number}")
         self.users = {}
         if data is None:
             return
@@ -205,8 +204,8 @@ class Server:
     def admin_command(self, client: socket, aes_key: int, data: str):
         # data = "COMMAND | ARGS"
         # TODO: add more commands
-        command = data.split("|", 1)[0]
-        data = data.removeprefix(command).removeprefix('|')
+        command = data.split(" ", 1)[0]
+        data = data.removeprefix(command).removeprefix(' ')
         args = data.split(" ")
         match command:
             case "shutdown":
