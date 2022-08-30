@@ -268,8 +268,8 @@ class Client:
         return int(self.receive_aes())
 
     def log_out(self):
-        # self.send_aes("log out")  # TODO: make server handle this and call from Chat interface
-        # self.last_log = int(self.receive_aes())
+        self.send_aes("log out")
+        self.last_log = int(self.receive_aes())
         self.save()
 
 

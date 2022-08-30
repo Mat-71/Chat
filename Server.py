@@ -1,4 +1,5 @@
 import subprocess
+from datetime import datetime
 from json import load, dumps
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from time import time
@@ -42,6 +43,43 @@ class Server:
         self.file_number = 0
         self.public_key = self.load()
         self.public_key, self.private_key = get_key_from_password("server", password, self.public_key, key_size)
+
+    @staticmethod
+    def get_time(args: list[str]) -> tuple[bool, int]:
+        date = datetime.now()
+        if len(args) == 1:
+            match args[0]:
+                case "all":
+                    return True, 0
+                case "today":
+                    return True, int((date.replace(hour=0, minute=0, second=0, microsecond=0)).timestamp() * 1_000)
+                case _:
+                    return False, 2
+        match args[0]:
+            case "-a":  # absolute time:
+                difference = False
+            case "-r":  # relative time:
+                difference = True
+            case _:
+                return False, 2
+        date_dict = {
+            "y": date.year,
+            "m": date.month,
+            "d": date.day,
+            "h": date.hour,
+            "M": date.minute,
+            "s": date.second
+        }
+        for component in args:
+            if len(component) < 2 or not component[:-1].isdigit():
+                return False, 2
+            value, unit = int(component[:-1]), component[-1]
+            if unit in date_dict.keys():
+                date_dict[unit] = date_dict[unit] - value if difference else value
+            else:
+                return False, 2
+        start = datetime(date_dict["y"], date_dict["m"], date_dict["d"], date_dict["h"], date_dict["M"], date_dict["s"])
+        return True, int(start.timestamp() * 1_000)
 
     def load(self):
         data = None
@@ -161,6 +199,11 @@ class Server:
         logger.info(f"[REG] {client_data['username']}")
         self.send_success(client, aes_key)
 
+    def log_out(self, client: socket, aes_key: int):
+        logger.info(f"[OUT] {self.clients.pop(client)['username']}")
+        self.send_success(client, aes_key)
+        client.close()
+
     def request_friend(self, aes_key: int, client: socket, user: User, data: str):
         friend_name, key_user, key_friend = data.rsplit("|", 2)
         if friend_name not in self.users or friend_name == user.username or friend_name in user.keys:
@@ -206,14 +249,22 @@ class Server:
         sent_time = self.users[friend].new_message(content, user.username)
         self.send_aes(sent_time, aes_key, client)
 
-    def admin_command(self, client: socket, aes_key: int, data: str, user: User):
-        # data = "COMMAND | ARGS"
+    def admin_command(self, client: socket, aes_key: int, user: User, data: str):
         # TODO: add more commands
+        # data = "COMMAND ARGS"
+        if user.admin_level < 1:
+            return self.send_fail(client, aes_key)
         command = data.split(" ", 1)[0]
-        data = data.removeprefix(command).removeprefix(' ')
-        args = data.split(" ")
+        args = data.removeprefix(command).removeprefix(' ').split(" ")
+        # fails:
+        # 1 - unknown command
+        # 2 - unexpected argument or missing argument
+        # 3 - unknown user
+        # 4 - no permission
         match command:
             case "shutdown":
+                if len(args) > 0:
+                    return self.send_fail(client, aes_key, 2)
                 self.send_success(client, aes_key)
                 return self.shutdown()
             case "restart":
@@ -222,26 +273,21 @@ class Server:
             case "promote":
                 # args = "LEVEL USERNAME"
                 level, username = args
-                if username not in self.users:
-                    return self.send_fail(client, aes_key, 1)
-                if int(level) >= user.admin_level:
+                if not level.removeprefix('-').isdigit():
                     return self.send_fail(client, aes_key, 2)
+                if username not in self.users:
+                    return self.send_fail(client, aes_key, 3)
+                if int(level) >= user.admin_level:
+                    return self.send_fail(client, aes_key, 4)
                 self.users[username].admin_level = int(level)
                 return self.send_success(client, aes_key)
+            case "getlogs":
+                if len(args) < 2:
+                    return self.send_fail(client, 2)
+                success, value = Server.get_time(args, False)
+                # TODO: do things
             case _:
-                return self.send_fail(client, aes_key)
-
-    def admin(self, client: socket, aes_key: int, user: User, data: str):
-        # data = "USERNAME_LENGTH|USERNAME|CONTENT"
-        if user.admin_level < 1:
-            return self.send_fail(client, aes_key)
-        action = data.split("|", 1)[0]
-        data = data.removeprefix(action).removeprefix('|')
-        match action:
-            case "command":
-                return self.admin_command(client, aes_key, data, user)
-            case _:
-                return self.send_fail(client, aes_key)
+                return self.send_fail(client, aes_key, 1)
 
     def aes_data_receive(self, client: socket, data: str):
         client_data = self.clients[client]
@@ -261,6 +307,8 @@ class Server:
             return self.send_fail(client, aes_key)
         user = self.users[client_data["username"]]
         match action:
+            case "log out":
+                return self.log_out(client, aes_key)
             case 'get friends':
                 return self.send_aes(user.get_friends(), aes_key, client)
             case 'request friend':
@@ -325,13 +373,13 @@ class Server:
             client.close()
         self.server_socket.close()
         self.save()
-        logger.info("[OUT] Server shutdown")
+        logger.warning("[OUT] Server shutdown")
         if close_server:
             exit(0)
 
     def restart(self):
         self.shutdown(False)
-        logger.info("[OUT] Server restart")
+        logger.warning("[OUT] Server restart")
         subprocess.run(["python3.10", "Server.py", "&"])
         exit(0)
 

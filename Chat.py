@@ -221,7 +221,7 @@ class Interface:
 
     def send_command(self, command: str):
         print("command:", command)
-        self.client.send_aes(f"admin|command|{command}")
+        self.client.send_aes(f"command|{command}")
 
 
 if __name__ == "__main__":
