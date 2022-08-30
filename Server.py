@@ -292,6 +292,11 @@ class Server:
                     return self.send_fail(client, aes_key, 4)
                 self.users[username].admin_level = int(level)
                 return self.send_success(client, aes_key)
+            case "update":
+                if len(args) > 0:
+                    return self.send_fail(client, aes_key, 2)
+                self.send_success(client, aes_key)
+                return self.update()
             case "getlogs":
                 if len(args) < 2:
                     return self.send_fail(client, 2)
@@ -395,6 +400,12 @@ class Server:
         self.shutdown(False)
         logger.warning("[OUT] Server restart")
         subprocess.run(["python3.10", "Server.py", "&"])
+        exit(0)
+
+    def update(self):
+        logger.warning("[OUT] update serveur")
+        self.shutdown(False)
+        subprocess.run(["python3.10", "update_server.py"])
         exit(0)
 
 
