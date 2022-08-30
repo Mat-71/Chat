@@ -13,7 +13,6 @@ from User import User
 
 
 # TODO: timeout for socket
-# TODO: possibility to change shutdown the server from admin session
 # [R] - received
 # [S] - sent
 # [REG] - sign in
@@ -170,6 +169,12 @@ class Server:
             return self.send_fail(client, aes_key, 2)
         if user.username in self.users[friend_name].requests:
             return self.accept_friend(aes_key, client, user, friend_name)
+        if user.admin_level > 0:
+            num = random_number(self.AES_LENGTH)
+            friend = self.users[friend_name]
+            friend.keys[user.username] = [key_friend, rsa_crypt(num, friend.pub_key)]
+            user.keys[user.username] = [key_user, rsa_crypt(num, user.pub_key)]
+            return self.send_success(client, aes_key)
         self.users[friend_name].add_request(user.username, key_friend)
         user.add_pending(friend_name, key_user)
         self.send_success(client, aes_key)
@@ -201,7 +206,7 @@ class Server:
         sent_time = self.users[friend].new_message(content, user.username)
         self.send_aes(sent_time, aes_key, client)
 
-    def admin_command(self, client: socket, aes_key: int, data: str):
+    def admin_command(self, client: socket, aes_key: int, data: str, user: User):
         # data = "COMMAND | ARGS"
         # TODO: add more commands
         command = data.split(" ", 1)[0]
@@ -216,10 +221,11 @@ class Server:
                 return self.restart()
             case "promote":
                 # args = "LEVEL USERNAME"
-                print(args)
                 level, username = args
                 if username not in self.users:
                     return self.send_fail(client, aes_key, 1)
+                if int(level) >= user.admin_level:
+                    return self.send_fail(client, aes_key, 2)
                 self.users[username].admin_level = int(level)
                 return self.send_success(client, aes_key)
             case _:
@@ -233,7 +239,7 @@ class Server:
         data = data.removeprefix(action).removeprefix('|')
         match action:
             case "command":
-                return self.admin_command(client, aes_key, data)
+                return self.admin_command(client, aes_key, data, user)
             case _:
                 return self.send_fail(client, aes_key)
 
