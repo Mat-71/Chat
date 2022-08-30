@@ -267,6 +267,19 @@ class Client:
         self.send_aes("get admin level")
         return int(self.receive_aes())
 
+    def send_command(self, command: str) -> str | int:
+        self.send_aes(f"command|{command}")
+        self.last_log = int(self.receive_aes())
+        if self.last_log != 0:
+            return self.last_log
+        # TODO: add all commands
+        match command.split(" ")[0]:
+            case "getlogs":
+                return self.receive_aes()
+            case _:
+                print(f"Invalid command: {command}")
+                return -1
+
     def log_out(self):
         self.send_aes("log out")
         self.last_log = int(self.receive_aes())

@@ -23,7 +23,7 @@ from User import User
 # [T] - duration of function
 # [UNK] - unknown
 # [EXC] - exception
-# [LOAD] - Load file
+# [LOAD] - loading file
 
 class Server:
     def __init__(self, ip: str, port: int, password: str, key_size: int = 4096):
@@ -249,6 +249,17 @@ class Server:
         sent_time = self.users[friend].new_message(content, user.username)
         self.send_aes(sent_time, aes_key, client)
 
+    def send_logs(self, start_time: int, client: socket, aes_key: int):
+        logs = []
+        with open("logs_server.log", "r") as f:
+            for line in f:
+                date, hour, log = line.split(" ", 2)
+                time_log = int(datetime.strptime(f"{date} {hour}", "%Y-%m-%d %H:%M:%S").timestamp() * 1_000)
+                if time_log >= start_time:
+                    logs.append(line)
+        data = "|".join(f"{len(log)}|{log}" for log in logs)
+        self.send_aes(data, aes_key, client)
+
     def admin_command(self, client: socket, aes_key: int, user: User, data: str):
         # TODO: add more commands
         # data = "COMMAND ARGS"
@@ -284,8 +295,11 @@ class Server:
             case "getlogs":
                 if len(args) < 2:
                     return self.send_fail(client, 2)
-                success, value = Server.get_time(args, False)
-                # TODO: do things
+                success, value = Server.get_time(args)
+                if not success:
+                    return self.send_fail(client, aes_key, value)
+                self.send_success(client, aes_key)
+                return self.send_logs(value, client, aes_key)
             case _:
                 return self.send_fail(client, aes_key, 1)
 

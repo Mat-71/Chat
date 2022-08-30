@@ -56,11 +56,17 @@ def generate_prime(key_size: int) -> int:
 def generate_large_primes_with_password(seed: int, key_size: int, public_key: int) -> tuple[int, int]:
     rand_seed(seed, 2)
     p = generate_prime(key_size)
-    return p, generate_prime(key_size) if public_key is None else public_key // p
+    if public_key is not None:
+        q = public_key // p
+        if p * q == public_key:
+            return p, q
+        else:
+            print("given public key incorrect, regenerating one...")
+    return p, generate_prime(key_size)
 
 
-def get_key_from_password(username: str, password: str, public_key: int = None, key_size: int = 2048) -> tuple[
-        int, tuple[int, int]]:
+def get_key_from_password(username: str, password: str, public_key: int = None, key_size: int = 2048) -> \
+        tuple[int, tuple[int, int]]:
     if not isinstance(username, str):
         raise TypeError(f"get_key_from_password | got {username} (type: {type(username).__name__} instead of str)")
     if not isinstance(password, str):

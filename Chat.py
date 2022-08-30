@@ -220,7 +220,29 @@ class Interface:
         return content
 
     def send_command(self, command: str):
+        if command.startswith("/"):
+            command = command[1:]
+        data = self.client.send_command(command)
+        if data is int:
+            # TODO: handle error
+            pass
+        if command.startswith("shutdown"):
+            # TODO: handle error
+            pass
+        elif command.startswith("restart"):
+            # TODO: handle error
+            pass
+        elif command.startswith("promote"):
+            # TODO: handle error
+            pass
+        elif command.startswith("update"):
+            # TODO: handle error
+            pass
+        elif command.startswith("getlogs"):
+            # TODO: save logs or display them
+            pass
         print("command:", command)
+        self.client.send_command(command)
         self.client.send_aes(f"command|{command}")
 
 
