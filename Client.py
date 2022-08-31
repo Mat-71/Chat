@@ -16,6 +16,8 @@ from Rsa import rsa_crypt as rsa_crypt
 
 class Client:
     def __init__(self, _username: str, password: str, new: bool = False):
+        self.public_key, self.private_key = get_key_from_password(_username, password,
+                                                                  key_size=128 if _username == "test" else 2048)
         self.server_address = ("172.105.6.165", 4040)
         self.HEADER_LENGTH = 10
         self.AES_LENGTH = 80
@@ -23,8 +25,6 @@ class Client:
         self.server_socket.connect(self.server_address)
         self.server_socket.setblocking(False)
         self.username = _username
-        self.public_key, self.private_key = get_key_from_password(_username, password,
-                                                                  key_size=128 if _username == "test" else 2048)
         self.messages = {}  # messages = {friend: [message, message, message]}
         self.keys: dict[str, int] = {}  # key = {"username": aes_key}
         self.requests = []  # requests = [username, username, username]

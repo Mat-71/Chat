@@ -267,6 +267,7 @@ class Server:
             return self.send_fail(client, aes_key)
         command = data.split(" ", 1)[0]
         args = data.removeprefix(command).removeprefix(' ').split(" ")
+        args = [arg for arg in args if arg != '']
         # fails:
         # 1 - unknown command
         # 2 - unexpected argument or missing argument

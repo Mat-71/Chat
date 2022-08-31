@@ -222,7 +222,7 @@ class Interface:
     def send_command(self, command: str):
         if command.startswith("/"):
             command = command[1:]
-        data = self.client.send_command(command)
+        data = 1
         if data is int:
             # TODO: handle error
             pass
@@ -242,7 +242,6 @@ class Interface:
             # TODO: save logs or display them
             pass
         print("command:", command)
-        self.client.send_command(command)
         self.client.send_aes(f"command|{command}")
 
 
