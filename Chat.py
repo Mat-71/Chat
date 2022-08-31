@@ -222,7 +222,7 @@ class Interface:
     def send_command(self, command: str):
         if command.startswith("/"):
             command = command[1:]
-        data = 1
+        data = 1 # TODO what is this data?
         if data is int:
             # TODO: handle error
             pass
