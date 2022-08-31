@@ -70,7 +70,7 @@ class Server:
             "M": date.minute,
             "s": date.second
         }
-        for component in args:
+        for component in args[1:]:
             if len(component) < 2 or not component[:-1].isdigit():
                 return False, 2
             value, unit = int(component[:-1]), component[-1]
@@ -299,9 +299,9 @@ class Server:
                 self.send_success(client, aes_key)
                 return self.update()
             case "getlogs":
-                if len(args) < 2:
+                if len(args) == 0:
                     return self.send_fail(client, 2)
-                success, value = Server.get_time(args)
+                success, value = self.get_time(args)
                 if not success:
                     return self.send_fail(client, aes_key, value)
                 self.send_success(client, aes_key)
