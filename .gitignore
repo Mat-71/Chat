@@ -1,3 +1,4 @@
-.idea
+.idea/
 *.json
-/Saves/
+Saves/
+__pycache__/
