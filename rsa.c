@@ -2,21 +2,22 @@
 #include <stdlib.h>
 #include "rsa.h"
 
-bytes to_bytes(long long n) {
+bytes to_bytes(const unsigned long long n) {
     st size = 1;
-    long long tmp = n;
+    unsigned long long tmp = n;
     while (tmp /= 256)
         size++;
     byte *data = malloc(size * sizeof(byte));
+    tmp = n;
     for (st i = 0; i < size; i++) {
-        data[i] = n % 256;
-        n /= 256;
+        data[i] = tmp % 256;
+        tmp /= 256;
     }
     return (bytes){data, size};
 }
 
-int to_int(bytes a) {
-    int n = 0;
+unsigned long long to_ull(const bytes a) {
+    unsigned long long n = 0;
     for (st i = 0; i < a.size; i++)
         n += a.data[i] * (1 << (8 * i));
     return n;
@@ -27,7 +28,7 @@ void print_bytes(bytes b) {
         printf("%02x", b.data[i]);
 }
 
-bytes add(bytes a, bytes b) {
+bytes add(const bytes a, const bytes b) {
     st size = a.size > b.size ? a.size : b.size;
     byte data[size];
     int carry = 0;
@@ -45,7 +46,7 @@ bytes add(bytes a, bytes b) {
     return (bytes){data, size};
 }
 
-bytes mul(bytes a, bytes b) {
+bytes mul(const bytes a, const bytes b) {
     st size = a.size + b.size;
     byte data[size];
     for (st i = 0; i < size; i++)
@@ -61,7 +62,20 @@ bytes mul(bytes a, bytes b) {
     return (bytes){data, size};
 }
 
-bytes mod(bytes a, bytes b) {
+bytes half(const bytes a) {
+    st size = a.size;
+    byte data[size];
+    int carry = 0;
+    for (st i = size - 1; i < size; i--) {
+        int sum = a.data[i] + carry * 256;
+        data[i] = sum / 2;
+        carry = sum % 2;
+    }
+    while (size > 1 && data[size - 1] == 0) size--;
+    return (bytes){data, size};
+}
+
+bytes mod(const bytes a, const bytes b) {
     st size = a.size;
     byte *data = malloc(size * sizeof(byte));
     for (st i = 0; i < size; i++)
@@ -95,26 +109,21 @@ bytes mod(bytes a, bytes b) {
         }
         while (size > 1 && data[size - 1] == 0) size--;
     }
+    data = realloc(data, size * sizeof(byte));
     return (bytes){data, size};
 }
 
+bytes pow_mod(const bytes a, const bytes b, const bytes c) {
+    // printf("%llu ^ %llu mod %llu\n", to_ull(a), to_ull(b), to_ull(c));
+    if (b.size == 1 && b.data[0] == 0) return to_bytes(1);
+    if (b.data[0] % 2) return mod(mul(a, pow_mod(mod(mul(a, a), c), half(b), c)), c);
+    return mod(pow_mod(mul(a, a), half(b), c), c);
+}
+
 int main() {
-    for (int a = 0; a < 100; a++) {
-        for (int b = 1; b < 100; b++) {
-            bytes A = to_bytes(a);
-            bytes B = to_bytes(b);
-            bytes C = mod(A, B);
-            if (to_int(C) != a % b) {
-                printf("a = %d, b = %d\n", a, b);
-                print_bytes(A);
-                printf(" %% ");
-                print_bytes(B);
-                printf(" = ");
-                print_bytes(C);
-                printf(" != %d\n", a % b);
-                return 1;
-            }
-        }
-    }
-    return 0;
+    bytes a = to_bytes(2);
+    bytes b = to_bytes(3);
+    bytes c = to_bytes(5);
+    print_bytes(pow_mod(a, b, c));
+    printf("\n");
 }
