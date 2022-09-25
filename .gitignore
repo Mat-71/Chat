@@ -1,4 +1,20 @@
+# Editors folders
 .idea/
-*.json
-Saves/
+.vscode/
+
+# OS generated files
 __pycache__/
+
+# C files
+*.o
+
+# Compiled files
+*.dll
+*.exe
+
+# Makefile
+Makefile
+
+# Data files
+Saves/
+*.json
